@@ -118,6 +118,9 @@
     "prettier": "^2.8.8",
     "ts-node": "^10.9.1"
   },
+  "resolutions": {
+    "jwa": "^2.0.1"
+  },
   "lint-staged": {
     "**/*.{js,ts}": [
       "eslint --max-warnings=0",
