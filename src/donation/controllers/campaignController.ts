@@ -135,7 +135,7 @@ export const getCampaigns = catchController(
         'donation.updatedAt',
       ])
       .addSelect('COALESCE(SUM(contribution.amount), 0)', 'amountRaised')
-      .addSelect('COUNT(DISTINCT contribution.user_id)', 'numberOfDonors')
+      .addSelect('COUNT(DISTINCT contribution.userId)', 'numberOfDonors')
       .leftJoin('donation.contributions', 'contribution')
       .groupBy(donationIdFromSql)
       .getRawMany()
@@ -179,7 +179,7 @@ export const getCampaign = catchController(
         'donation.updatedAt',
       ])
       .addSelect('COALESCE(SUM(contribution.amount), 0)', 'amountRaised')
-      .addSelect('COUNT(DISTINCT contribution.user_id)', 'numberOfDonors')
+      .addSelect('COUNT(DISTINCT contribution.userId)', 'numberOfDonors')
       .leftJoin('donation.contributions', 'contribution')
       .where('donation.id = :id', { id })
       .groupBy(donationIdFromSql)
