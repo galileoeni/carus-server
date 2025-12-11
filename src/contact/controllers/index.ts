@@ -51,7 +51,7 @@ export const contactEmailController = catchController(
     return res
       .status(StatusCodes.OK)
       .json(
-        generalResponse(StatusCodes.OK, {}, [], 'message sent successfully'),
+        generalResponse(StatusCodes.OK, {}, [], 'Message sent successfully'),
       )
   },
 )
