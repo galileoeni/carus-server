@@ -16,7 +16,7 @@ export const toggleUserStatus = catchController(
     const { id } = req.params
 
     const userRepository = AppDataSource.getRepository(User)
-    const user = await userRepository.findOne({ where: { id } })
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
 
     if (!user) {
       return res

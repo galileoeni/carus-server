@@ -321,7 +321,7 @@ export const removeAdmin = async (req: Request, res: Response) => {
   const { id } = req.params
 
   try {
-    const user = await userRepository.findOne({ where: { id } })
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
 
     if (!user) {
       return res
@@ -361,7 +361,7 @@ export const assignAdmin = async (req: Request, res: Response) => {
   const { id } = req.params
 
   try {
-    const user = await userRepository.findOne({ where: { id } })
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
 
     if (!user) {
       return res

@@ -67,7 +67,7 @@ export const createCampaign = catchController(
 
 export const updateCampaign = catchController(
   async (req: Request, res: Response) => {
-    const { id } = req.params
+    const id  = req.params.id as string
     const { error } = updateCampaignSchema.validate(req.body)
     if (error) {
       const { details, message } = formatJoiError(error)
@@ -118,7 +118,7 @@ export const updateCampaign = catchController(
 
 export const deleteCampaign = catchController(
   async (req: Request, res: Response) => {
-    const { id } = req.params
+    const id = req.params.id as string
     const donationRepository = AppDataSource.getRepository(Donation)
     const campaign = await donationRepository.findOne({ where: { id } })
     if (!campaign) {
@@ -127,6 +127,12 @@ export const deleteCampaign = catchController(
         .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
     }
 
+    if (campaign.image) {
+      const publicId = campaign.image.split('/').pop()?.split('.')[0]
+      if (publicId) {
+        await deleteFromCloudinary(`campaigns/${publicId}`)
+      }
+    }
     await donationRepository.remove(campaign)
     res
       .status(StatusCodes.OK)

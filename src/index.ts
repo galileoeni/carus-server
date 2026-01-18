@@ -60,10 +60,10 @@ const startServer = async () => {
       secret: env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
-    }),
+    }) as any,
   )
 
-  app.use(passport.initialize())
+  app.use(passport.initialize() as any)
   app.use(passport.session())
   app.use(cookieParser())
   app.use(bodyParser.json())

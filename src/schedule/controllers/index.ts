@@ -1,23 +1,26 @@
-import { Request, Response } from 'express'
-import fs from 'fs/promises'
-import { StatusCodes } from 'http-status-codes'
-import { User } from 'src/entities/user'
-
 import {
   CategoryEnum,
   MaterialEnum,
   ScheduleRow,
   ScheduleStatusEnum,
 } from '../../@types/schedule'
-import { AppDataSource } from '../../data-source'
-import { Schedule } from '../../entities/schedule'
-import { Wallet } from '../../entities/wallet'
 import {
   generalResponse,
   returnSuccess,
   userNotFound,
 } from '../../helpers/constants'
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from '../../utils/cloudinary'
+import { Request, Response } from 'express'
+import { StatusCodes } from 'http-status-codes'
+
+import { Schedule } from '../../entities/schedule'
+import { User } from '../../entities/user'
+import { Wallet } from '../../entities/wallet'
 import catchController from '../../utils/catchControllerAsyncs'
+import { AppDataSource } from '../../data-source'
 
 const passRequredFieldsMessage =
   'Please make sure you pass all the required fields'
@@ -45,9 +48,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
     'address',
   ]
   if (requiredFields.some((field) => !req.body[field])) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -62,9 +62,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
 
   //validate the material
   if (material && !Object.values(MaterialEnum).includes(material)) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -81,9 +78,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
 
   //validate the category
   if (category && !Object.values(CategoryEnum).includes(category)) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -100,9 +94,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
 
   //validate material amount
   if (material_amount < 50 || material_amount > 10000) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -117,9 +108,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
 
   //validate container amount
   if (container_amount < 1 || container_amount > 50) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -135,9 +123,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
   const user: User | undefined = req.user
 
   if (!user) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.NOT_FOUND)
       .json(generalResponse(StatusCodes.NOT_FOUND, '', [], userNotFound))
@@ -155,9 +140,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
   })
 
   if (!address) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -175,9 +157,6 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
   //validate date orrrrr... vali-DATE :)))
   const dateString = new Date(req.body.date)
   if (dateString < new Date(Date.now())) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json(
@@ -193,12 +172,48 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
   const date = dateString
 
   if (!wallet) {
-    if (req.file) {
-      await fs.unlink(req.file.path)
-    }
     return res
       .status(StatusCodes.NOT_FOUND)
       .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'Wallet not found'))
+  }
+
+  let image: string | undefined = undefined
+  let publicId: string | undefined = undefined
+
+  if (req.file) {
+    try {
+      const fileStr = `data:${
+        req.file.mimetype
+      };base64,${req.file.buffer.toString('base64')}`
+      const uploadResult = await uploadToCloudinary(fileStr, 'wastes')
+      image = uploadResult?.secure_url
+      publicId = uploadResult?.public_id
+
+      if (!image) {
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json(
+            generalResponse(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              {},
+              [],
+              'Failed to upload image to cloud storage',
+            ),
+          )
+      }
+    } catch (error) {
+      console.error('Image upload error:', error)
+      return res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json(
+          generalResponse(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            {},
+            [],
+            'Image upload failed. Please try again.',
+          ),
+        )
+    }
   }
 
   const newSchedule = scheduleRepository.create({
@@ -211,7 +226,7 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
     status: status,
     user: user,
     schedule_date: new Date(Date.now()),
-    image: req.file?.path,
+    image: image,
   })
 
   await scheduleRepository.save(newSchedule)
@@ -312,8 +327,54 @@ const updatePickupSchedule = catchController(
         )
     }
 
+    let image: string | undefined = undefined
+    let publicId: string | undefined = undefined
+
+    if (req.file) {
+      if (schedule.image) {
+        const publicId = schedule.image.split('/').pop()?.split('.')[0]
+        if (publicId) {
+          await deleteFromCloudinary(`wastes/${publicId}`)
+        }
+      }
+      try {
+        const fileStr = `data:${
+          req.file.mimetype
+        };base64,${req.file.buffer.toString('base64')}`
+        const uploadResult = await uploadToCloudinary(fileStr, 'wastes')
+        image = uploadResult?.secure_url
+        publicId = uploadResult?.public_id
+
+        if (!image) {
+          return res
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+              generalResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                {},
+                [],
+                'Failed to upload image to cloud storage',
+              ),
+            )
+        }
+      } catch (error) {
+        console.error('Image upload error:', error)
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json(
+            generalResponse(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              {},
+              [],
+              'Image upload failed. Please try again.',
+            ),
+          )
+      }
+    }
+
     schedule.status = newScheduleStatus
     schedule.date = new Date(Date.now())
+    schedule.image = image
 
     await scheduleRepository.save(schedule)
     return res.status(StatusCodes.OK).json(
@@ -331,6 +392,7 @@ const updatePickupSchedule = catchController(
           schedule_date: schedule.schedule_date,
           status: schedule.status,
           transaction_id: schedule.transaction?.id,
+          image: schedule.image,
         },
         [],
         returnSuccess,
@@ -374,6 +436,7 @@ const getSchedules = catchController(async (req: Request, res: Response) => {
         schedule_date: schedule.schedule_date,
         status: schedule.status,
         transaction_id: schedule.transaction?.id,
+        image: schedule.image,
       })),
       [],
       returnSuccess,
@@ -435,6 +498,7 @@ const getScheduleById = catchController(async (req: Request, res: Response) => {
         schedule_date: schedule.schedule_date,
         status: schedule.status,
         transaction_id: schedule.transaction?.id,
+        image: schedule.image,
       },
       [],
       returnSuccess,
@@ -474,6 +538,10 @@ const deleteScheduleById = catchController(
         )
     }
 
+    if (schedule.image) {
+      const publicId = schedule.image.split('/').pop()?.split('.')[0]
+      await deleteFromCloudinary(`wastes/${publicId}`)
+    }
     await scheduleRepository.remove(schedule)
 
     return res
