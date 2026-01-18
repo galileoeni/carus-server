@@ -91,7 +91,7 @@ export const getLocationDetails = catchController(
 
 export const updateConfiguration = catchController(
   async (req: Request, res: Response) => {
-    const { type } = req.params
+    const type = req.params.type as string
     const { error } = updateConfigurationSchema.validate(req.body)
     if (error) {
       const { details, message } = formatJoiError(error)

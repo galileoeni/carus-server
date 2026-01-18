@@ -39,7 +39,7 @@ export const getDonation = catchController(
     const { id } = req.params
     const donationRepository = AppDataSource.getRepository(Donation)
     const campaign = await donationRepository.findOne({
-      where: { id },
+      where: { id: id.toString() },
       relations: ['contributions', 'contributions.user'],
     })
     if (!campaign) {

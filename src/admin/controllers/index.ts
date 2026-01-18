@@ -231,15 +231,18 @@ export const getDashboardData = catchController(
 
 export const acceptSchedule = catchController(
   async (req: Request, res: Response) => {
-    const scheduleId = req.params.id
+    const { id } = req.params
+
+    // Ensure id is a single string
+    if (typeof id !== 'string') {
+      return res.status(400).json({ message: 'Invalid ID format' })
+    }
 
     const scheduleRepository = AppDataSource.getRepository(Schedule)
-    // const transactionRepository = AppDataSource.getRepository(Transaction)
 
     const existingSchedule = await scheduleRepository.findOne({
-      where: { id: scheduleId },
+      where: { id: id }, // TypeScript is happy now because 'id' is strictly a string
     })
-
     if (!existingSchedule) {
       return res
         .status(StatusCodes.NOT_FOUND)
@@ -301,11 +304,14 @@ export const acceptSchedule = catchController(
 
 export const cancelSchedule = catchController(
   async (req: Request, res: Response) => {
-    const scheduleId = req.params.id
-    // const transactionRepository = AppDataSource.getRepository(Transaction)
+    const { id } = req.params
 
+    // Ensure id is a single string
+    if (typeof id !== 'string') {
+      return res.status(400).json({ message: 'Invalid ID format' })
+    }
     const existingSchedule = await scheduleRepository.findOne({
-      where: { id: scheduleId },
+      where: { id: id },
     })
 
     if (!existingSchedule) {
@@ -365,7 +371,12 @@ export const cancelSchedule = catchController(
 export const fulfillSchedule = catchController(
   async (req: Request, res: Response) => {
     //fetch schedule id from parameters
-    const scheduleId = req.params.id
+    const { id } = req.params
+
+    // Ensure id is a single string
+    if (typeof id !== 'string') {
+      return res.status(400).json({ message: 'Invalid ID format' })
+    }
 
     const { material_amount, material } = req.body
 
@@ -454,7 +465,7 @@ export const fulfillSchedule = catchController(
 
     //find schedule with the scheduleId
     const existingSchedule = await scheduleRepository.findOne({
-      where: { id: scheduleId },
+      where: { id: id },
     })
 
     if (!existingSchedule) {

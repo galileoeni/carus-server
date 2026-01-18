@@ -87,6 +87,8 @@ export const getAccount = catchController(
 export const editProfile = catchController(
   // eslint-disable-next-line sonarjs/cognitive-complexity
   async (req: Request, res: Response) => {
+    // console.log("🚀 ~ req.body:", req.body)
+    // console.log('🚀 ~ req.file:', req.file)
     const user: User | undefined = req.user
     const userRepository = AppDataSource.getRepository(User)
 
@@ -152,12 +154,39 @@ export const editProfile = catchController(
           await deleteFromCloudinary(`avatars/${publicId}`)
         }
       }
-      const fileStr = `data:${
-        req.file.mimetype
-      };base64,${req.file.buffer.toString('base64')}`
-      const uploadResult = await uploadToCloudinary(fileStr, 'avatars')
-      if (uploadResult) {
+      
+      try {
+        const fileStr = `data:${
+          req.file.mimetype
+        };base64,${req.file.buffer.toString('base64')}`
+        const uploadResult = await uploadToCloudinary(fileStr, 'avatars')
+        
+        if (!uploadResult?.secure_url) {
+          return res
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+              generalResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                {},
+                [],
+                'Failed to upload avatar to cloud storage',
+              ),
+            )
+        }
+        
         user.avatar = uploadResult.secure_url
+      } catch (error) {
+        console.error('Avatar upload error:', error)
+        return res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json(
+            generalResponse(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              {},
+              [],
+              'Avatar upload failed. Please try again.',
+            ),
+          )
       }
     }
 
@@ -261,7 +290,7 @@ export const editProfile = catchController(
             phone: req.body.phone,
           },
         })
-        if (existingPhone) {
+        if (existingPhone && existingPhone.id !== user.id) {
           return res
             .status(StatusCodes.CONFLICT)
             .json(
