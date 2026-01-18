@@ -1654,40 +1654,6 @@
   dependencies:
     "@opentelemetry/instrumentation" "^0.52.0 || ^0.53.0 || ^0.54.0 || ^0.55.0 || ^0.56.0 || ^0.57.0"
 
-"@redis/bloom@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/@redis/bloom/-/bloom-1.2.0.tgz"
-  integrity sha512-HG2DFjYKbpNmVXsa0keLHp/3leGJz1mjh09f2RLGGLQZzSHpkmZWuwJbAvo3QcRY8p80m5+ZdXZdYOSBLlp7Cg==
-
-"@redis/client@1.6.1":
-  version "1.6.1"
-  resolved "https://registry.npmjs.org/@redis/client/-/client-1.6.1.tgz"
-  integrity sha512-/KCsg3xSlR+nCK8/8ZYSknYxvXHwubJrU82F3Lm1Fp6789VQ0/3RJKfsmRXjqfaTA++23CvC3hqmqe/2GEt6Kw==
-  dependencies:
-    cluster-key-slot "1.1.2"
-    generic-pool "3.9.0"
-    yallist "4.0.0"
-
-"@redis/graph@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.npmjs.org/@redis/graph/-/graph-1.1.1.tgz"
-  integrity sha512-FEMTcTHZozZciLRl6GiiIB4zGm5z5F3F6a6FZCyrfxdKOhFlGkiAqlexWMBzCi4DcRoyiOsuLfW+cjlGWyExOw==
-
-"@redis/json@1.0.7":
-  version "1.0.7"
-  resolved "https://registry.npmjs.org/@redis/json/-/json-1.0.7.tgz"
-  integrity sha512-6UyXfjVaTBTJtKNG4/9Z8PSpKE6XgSyEb8iwaqDcy+uKrd/DGYHTWkUdnQDyzm727V7p21WUMhsqz5oy65kPcQ==
-
-"@redis/search@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/@redis/search/-/search-1.2.0.tgz"
-  integrity sha512-tYoDBbtqOVigEDMAcTGsRlMycIIjwMCgD8eR2t0NANeQmgK/lvxNAvYyb6bZDD4frHRhIHkJu2TBRvB0ERkOmw==
-
-"@redis/time-series@1.1.0":
-  version "1.1.0"
-  resolved "https://registry.npmjs.org/@redis/time-series/-/time-series-1.1.0.tgz"
-  integrity sha512-c1Q99M5ljsIuc4YdaCwfUEXsofakb9c8+Zse2qxTadu8TalLXuAESzLvFAvNVbkmSlvlzIQOLpBCmWI9wTOt+g==
-
 "@sentry/core@10.11.0":
   version "10.11.0"
   resolved "https://registry.npmjs.org/@sentry/core/-/core-10.11.0.tgz"
@@ -2863,11 +2829,6 @@ cloudinary@^2.9.0:
   dependencies:
     lodash "^4.17.21"
 
-cluster-key-slot@1.1.2:
-  version "1.1.2"
-  resolved "https://registry.npmjs.org/cluster-key-slot/-/cluster-key-slot-1.1.2.tgz"
-  integrity sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==
-
 color-convert@^1.9.0:
   version "1.9.3"
   resolved "https://registry.npmjs.org/color-convert/-/color-convert-1.9.3.tgz"
@@ -2941,11 +2902,6 @@ concat-stream@^2.0.0:
     inherits "^2.0.3"
     readable-stream "^3.0.2"
     typedarray "^0.0.6"
-
-connect-redis@^9.0.0:
-  version "9.0.0"
-  resolved "https://registry.npmjs.org/connect-redis/-/connect-redis-9.0.0.tgz"
-  integrity sha512-QwzyvUePTMvEzG1hy45gZYw3X3YHrjmEdSkayURlcZft7hqadQ3X39wYkmCqblK2rGlw+XItELYt6GnyG6DEIQ==
 
 constantinople@^4.0.1:
   version "4.0.1"
@@ -3127,10 +3083,10 @@ debug@^2.6.8:
   dependencies:
     ms "2.0.0"
 
-debug@^2.6.9:
-  version "2.6.9"
-  resolved "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz"
-  integrity sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==
+debug@4, debug@^4.1.0, debug@^4.1.1, debug@^4.3.0, debug@^4.3.1, debug@^4.3.2, debug@^4.3.4, debug@^4.3.5:
+  version "4.4.3"
+  resolved "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz"
+  integrity sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==
   dependencies:
     ms "2.0.0"
 
@@ -3886,11 +3842,6 @@ gcp-metadata@^6.1.0:
   dependencies:
     gaxios "^6.0.0"
     json-bigint "^1.0.0"
-
-generic-pool@3.9.0:
-  version "3.9.0"
-  resolved "https://registry.npmjs.org/generic-pool/-/generic-pool-3.9.0.tgz"
-  integrity sha512-hymDOu5B53XvN4QT9dBmZxPX4CWhBPPLguTZ9MMFeFa/Kg0xWVfylOVNlJji/E7yTZWFd/q9GO5TxDLq156D7g==
 
 gensync@^1.0.0-beta.2:
   version "1.0.0-beta.2"
@@ -4807,6 +4758,14 @@ loose-envify@^1.0.0:
   dependencies:
     js-tokens "^3.0.0 || ^4.0.0"
 
+lru-cache@^4.0.3:
+  version "4.1.5"
+  resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-4.1.5.tgz#8bbe50ea85bed59bc9e33dcab8235ee9bcf443cd"
+  integrity sha512-sWZlbEP2OsHNkXrMl5GYk/jKk70MBng6UU4YI/qGDYbgf6YbP4EvmqISbXCoJiRKs+1bSpFHVgQxvJ17F2li5g==
+  dependencies:
+    pseudomap "^1.0.2"
+    yallist "^2.1.2"
+
 lru-cache@^5.1.1:
   version "5.1.1"
   resolved "https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz"
@@ -4838,6 +4797,14 @@ media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz"
   integrity sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==
+
+memorystore@^1.6.7:
+  version "1.6.7"
+  resolved "https://registry.yarnpkg.com/memorystore/-/memorystore-1.6.7.tgz#78f9b1c2b06949abfb4f85ec71f558ec4265e63d"
+  integrity sha512-OZnmNY/NDrKohPQ+hxp0muBcBKrzKNtHr55DbqSx9hLsYVNnomSAMRAtI7R64t3gf3ID7tHQA7mG4oL3Hu9hdw==
+  dependencies:
+    debug "^4.3.0"
+    lru-cache "^4.0.3"
 
 meow@^12.0.1:
   version "12.1.1"
@@ -5565,6 +5532,11 @@ proxy-from-env@^1.1.0:
   resolved "https://registry.npmjs.org/proxy-from-env/-/proxy-from-env-1.1.0.tgz"
   integrity sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==
 
+pseudomap@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/pseudomap/-/pseudomap-1.0.2.tgz#f052a28da70e618917ef0a8ac34c1ae5a68286b3"
+  integrity sha512-b/YwNhb8lk1Zz2+bXXpS/LK9OisiZZ1SNsSLxN1x2OXVEhW2Ckr/7mWE5vrC1ZTiJlD9g19jWszTmJsB+oEpFQ==
+
 pstree.remy@^1.1.8:
   version "1.1.8"
   resolved "https://registry.npmjs.org/pstree.remy/-/pstree.remy-1.1.8.tgz"
@@ -5758,18 +5730,6 @@ readdirp@~3.6.0:
   integrity sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==
   dependencies:
     picomatch "^2.2.1"
-
-redis@^4.7.1:
-  version "4.7.1"
-  resolved "https://registry.npmjs.org/redis/-/redis-4.7.1.tgz"
-  integrity sha512-S1bJDnqLftzHXHP8JsT5II/CtHWQrASX5K96REjWjlmWKrviSOLWmM7QnRLstAWsu1VBBV1ffV6DzCvxNP0UJQ==
-  dependencies:
-    "@redis/bloom" "1.2.0"
-    "@redis/client" "1.6.1"
-    "@redis/graph" "1.1.1"
-    "@redis/json" "1.0.7"
-    "@redis/search" "1.2.0"
-    "@redis/time-series" "1.1.0"
 
 reflect-metadata@^0.1.13:
   version "0.1.13"
@@ -6748,17 +6708,17 @@ y18n@^5.0.5:
   resolved "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz"
   integrity sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==
 
+yallist@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/yallist/-/yallist-2.1.2.tgz#1c11f9218f076089a47dd512f93c6699a6a81d52"
+  integrity sha512-ncTzHV7NvsQZkYe1DW7cbDLm0YpzHmZF5r/iyP3ZnQtMiJ+pjzisCiMNI+Sj+xQF5pXhSHxSB3uDbsBTzY/c2A==
+
 yallist@^3.0.2:
   version "3.1.1"
   resolved "https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz"
   integrity sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==
 
 yallist@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.npmjs.org/yallist/-/yallist-4.0.0.tgz"
-  integrity sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==
-
-yallist@4.0.0:
   version "4.0.0"
   resolved "https://registry.npmjs.org/yallist/-/yallist-4.0.0.tgz"
   integrity sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==
