@@ -11,34 +11,35 @@ Sentry.init({
 })
 
 import bodyParser from 'body-parser'
-import { RedisStore } from 'connect-redis'
+// import { RedisStore } from 'connect-redis'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import session from 'express-session'
 import passport from 'passport'
 import path from 'path'
+import createMemoryStore from 'memorystore'
 import 'reflect-metadata'
 
-import redisClient from './config/redis'
+// import redisClient from './config/redis'
 import { AppDataSource } from './data-source'
 import mainRoutes from './routes'
 import adminRoutes from './routes/adminRoutes'
 import { getUptime } from './utils/helper'
 
-const HOST = '0.0.0.0';
+const MemoryStore = createMemoryStore(session)
 const startServer = async () => {
   const app: express.Application = express()
 
-  redisClient
-    .connect()
-    .then(() => {
-      console.log('Redis Connection Initialized')
-    })
-    .catch((err) => {
-      console.error('Error during Redis Connection', err)
-      throw err
-    })
+  // redisClient
+  //   .connect()
+  //   .then(() => {
+  //     console.log('Redis Connection Initialized')
+  //   })
+  //   .catch((err) => {
+  //     console.error('Error during Redis Connection', err)
+  //     throw err
+  //   })
 
   AppDataSource.initialize()
     .then(() => {
@@ -53,8 +54,8 @@ const startServer = async () => {
   app.use(cors())
   app.use(
     session({
-      store: new RedisStore({
-        client: redisClient,
+      store: new MemoryStore({
+        checkPeriod: 86400000, // prune expired entries every 24h
       }),
       secret: env.SESSION_SECRET,
       resave: false,
@@ -79,23 +80,22 @@ const startServer = async () => {
       uptime: getUptime(),
     }
 
-    try {
-      const redisPing = await redisClient.ping()
-      healthCheck.redis = redisPing === 'PONG' ? 'up' : 'down'
-      console.log('HealthCheck.redis:', healthCheck.redis)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      healthCheck.redis = 'down'
-      console.log('HealthCheck.redis:', healthCheck.redis)
-      console.log(`Redis health check failed: ${err.message} `, err)
-      Sentry.captureException(err)
-    }
+    // try {
+    //   const redisPing = await redisClient.ping()
+    //   healthCheck.redis = redisPing === 'PONG' ? 'up' : 'down'
+    //   console.log('HealthCheck.redis:', healthCheck.redis)
+    //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // } catch (err: any) {
+    //   healthCheck.redis = 'down'
+    //   console.log('HealthCheck.redis:', healthCheck.redis)
+    //   console.log(`Redis health check failed: ${err.message} `, err)
+    //   Sentry.captureException(err)
+    // }
 
     try {
       const status = AppDataSource.isInitialized
       healthCheck.database = 'up'
       console.log('AppDataSource.isInitialized:', status)
-      console.log('Data Source Initialized')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       healthCheck.database = 'down'
@@ -117,7 +117,6 @@ const startServer = async () => {
   app.set('view engine', 'pug')
   app.set('views', path.join(__dirname + '../views'))
   const server = app.listen(env.PORT, env.HOST, () => {
-    console.log("HOST: " + env.HOST)
     console.log(`Server is running at: http://localhost:${env.PORT}`)
   })
 
