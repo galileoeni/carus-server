@@ -1,5 +1,4 @@
 import { Request, Response } from 'express'
-import fs from 'fs/promises'
 import { StatusCodes } from 'http-status-codes'
 
 import { AppDataSource } from '../../data-source'
@@ -10,6 +9,10 @@ import {
   returnSuccess,
 } from '../../helpers/constants'
 import catchController from '../../utils/catchControllerAsyncs'
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from '../../utils/cloudinary'
 import { formatJoiError } from '../../utils/helper'
 import {
   createCampaignSchema,
@@ -22,9 +25,6 @@ export const createCampaign = catchController(
   async (req: Request, res: Response) => {
     const { error } = createCampaignSchema.validate(req.body)
     if (error) {
-      if (req.file) {
-        await fs.unlink(req.file.path)
-      }
       const { details, message } = formatJoiError(error)
       return res
         .status(StatusCodes.BAD_REQUEST)
@@ -47,7 +47,13 @@ export const createCampaign = catchController(
     newCampaign.target = target
     newCampaign.duration = duration
     if (req.file) {
-      newCampaign.image = req.file.path
+      const fileStr = `data:${
+        req.file.mimetype
+      };base64,${req.file.buffer.toString('base64')}`
+      const uploadResult = await uploadToCloudinary(fileStr, 'campaigns')
+      if (uploadResult) {
+        newCampaign.image = uploadResult.secure_url
+      }
     }
     await donationRepository.save(newCampaign)
 
@@ -64,9 +70,6 @@ export const updateCampaign = catchController(
     const { id } = req.params
     const { error } = updateCampaignSchema.validate(req.body)
     if (error) {
-      if (req.file) {
-        await fs.unlink(req.file.path)
-      }
       const { details, message } = formatJoiError(error)
       return res
         .status(StatusCodes.BAD_REQUEST)
@@ -83,15 +86,28 @@ export const updateCampaign = catchController(
     const donationRepository = AppDataSource.getRepository(Donation)
     const campaign = await donationRepository.findOne({ where: { id } })
     if (!campaign) {
-      if (req.file) {
-        await fs.unlink(req.file.path)
-      }
       return res
         .status(StatusCodes.NOT_FOUND)
         .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
     }
 
     Object.assign(campaign, req.body)
+    if (req.file) {
+      if (campaign.image) {
+        const publicId = campaign.image.split('/').pop()?.split('.')[0]
+        if (publicId) {
+          await deleteFromCloudinary(`campaigns/${publicId}`)
+        }
+      }
+      const fileStr = `data:${
+        req.file.mimetype
+      };base64,${req.file.buffer.toString('base64')}`
+      const uploadResult = await uploadToCloudinary(fileStr, 'campaigns')
+      if (uploadResult) {
+        campaign.image = uploadResult.secure_url
+      }
+    }
+
     await donationRepository.save(campaign)
 
     res
