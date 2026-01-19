@@ -73,42 +73,16 @@ export const redeemForAirtime = catchController(
 
     const nairapoints = points * Number(pointToNaira?.value)
 
-    const interswitchService = new InterswitchService()
-
-    // In a real-world application, you would dynamically fetch the biller and payment item information.
-    // For simplicity, we'll use a hardcoded payment code for MTN 100 Naira.
-    const paymentCode = '10901' // Example payment code for MTN 100 Naira
-
-    const airtimePurchase = await interswitchService.purchaseAirtime(
-      paymentCode,
-      phoneNumber,
-      nairapoints,
-    )
-
-    if (airtimePurchase.data.ResponseCode === '90000') {
-      wallet.points = (wallet.points || 0) - points
-      await walletRepository.save(wallet)
-    } else {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json(
-          generalResponse(
-            StatusCodes.BAD_REQUEST,
-            '',
-            [],
-            'Airtime purchase failed',
-          ),
-        )
-    }
-
-
     const newRedemption = new Redemption()
     newRedemption.type = RedemptionType.AIRTIME
-    newRedemption.amount = points
+    newRedemption.points = points
     newRedemption.network = network
     newRedemption.phoneNumber = phoneNumber
     newRedemption.user = user
     await redemptionRepository.save(newRedemption)
+
+    wallet.points = (wallet.points || 0) - points
+    await walletRepository.save(wallet)
 
     res
       .status(StatusCodes.CREATED)
@@ -176,58 +150,17 @@ export const redeemForCash = catchController(
 
     const nairapoints = points * Number(pointToNaira?.value)
 
-    const interswitchService = new InterswitchService()
-
-    const {
-      data: { AccountName: resolvedAccountName },
-    } = await interswitchService.validateAccountNumber(accountNumber, bankName)
-
-    if (resolvedAccountName.toLowerCase() !== accountName.toLowerCase()) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json(
-          generalResponse(
-            StatusCodes.BAD_REQUEST,
-            '',
-            [],
-            'Account name does not match',
-          ),
-        )
-    }
-
-    const transfer = await interswitchService.transfer(
-      nairapoints,
-      accountNumber,
-      bankName,
-      user.last_name || '',
-      accountName,
-    )
-
-    if (transfer.data.ResponseCode === '90000') {
-      wallet.points = (wallet.points || 0) - points
-      await walletRepository.save(wallet)
-    } else {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json(
-          generalResponse(
-            StatusCodes.BAD_REQUEST,
-            '',
-            [],
-            'Transfer failed',
-          ),
-        )
-    }
-
-
     const newRedemption = new Redemption()
     newRedemption.type = RedemptionType.CASH
-    newRedemption.amount = points
+    newRedemption.points = points
     newRedemption.accountNumber = accountNumber
     newRedemption.bankName = bankName
     newRedemption.accountName = accountName
     newRedemption.user = user
     await redemptionRepository.save(newRedemption)
+
+    wallet.points = (wallet.points || 0) - points
+    await walletRepository.save(wallet)
 
     res
       .status(StatusCodes.CREATED)

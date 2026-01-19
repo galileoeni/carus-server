@@ -10,6 +10,9 @@ import {
   getDashboardData,
   getTotalWalletAmount,
   loginAdmin,
+  approveRedemption,
+  declineRedemption,
+  getAllRedemptions,
 } from '../controllers'
 import {
   assignAdmin,
@@ -50,5 +53,9 @@ router.get('/donations/:id', verifyAdmin, getDonation)
 router.get('/complaints', verifyAdmin, viewComplaints)
 router.get('/transactions', verifyAdmin, getAllTransactions)
 router.use('/configurations', verifyAdmin, adminConfigurationRoutes)
+
+router.get('/redemptions', verifyAdmin, getAllRedemptions)
+router.put('/redemptions/approve/:id', verifyAdmin, approveRedemption)
+router.put('/redemptions/decline/:id', verifyAdmin, declineRedemption)
 
 export default router

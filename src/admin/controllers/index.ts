@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { AppDataSource } from '../../data-source'
 import { Configurations } from '../../entities/configurations'
+import { Redemption, RedemptionStatus } from '../../entities/redemption'
 import { Schedule } from '../../entities/schedule'
 import { Transaction } from '../../entities/transactions'
 import { User } from '../../entities/user'
@@ -138,6 +139,105 @@ export const loginAdmin = catchController(
           ),
         )
     }
+  },
+)
+
+export const approveRedemption = catchController(
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+    const redemptionRepository = AppDataSource.getRepository(Redemption)
+    const redemption = await redemptionRepository.findOne({
+      where: { id },
+    })
+
+    if (!redemption) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          generalResponse(
+            StatusCodes.NOT_FOUND,
+            {},
+            [],
+            'Redemption not found',
+          ),
+        )
+    }
+
+    if (redemption.status !== RedemptionStatus.PENDING) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(
+          generalResponse(
+            StatusCodes.BAD_REQUEST,
+            {},
+            [],
+            'Redemption has already been processed',
+          ),
+        )
+    }
+
+    redemption.status = RedemptionStatus.PAID
+    await redemptionRepository.save(redemption)
+
+    res
+      .status(StatusCodes.OK)
+      .json(generalResponse(StatusCodes.OK, {}, [], 'Redemption approved'))
+  },
+)
+
+export const declineRedemption = catchController(
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+    const redemptionRepository = AppDataSource.getRepository(Redemption)
+    const redemption = await redemptionRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    })
+
+    if (!redemption) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          generalResponse(
+            StatusCodes.NOT_FOUND,
+            {},
+            [],
+            'Redemption not found',
+          ),
+        )
+    }
+
+    if (redemption.status !== RedemptionStatus.PENDING) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(
+          generalResponse(
+            StatusCodes.BAD_REQUEST,
+            {},
+            [],
+            'Redemption has already been processed',
+          ),
+        )
+    }
+
+    redemption.status = RedemptionStatus.DECLINED
+    await redemptionRepository.save(redemption)
+
+    const walletRepository = AppDataSource.getRepository(Wallet)
+    if (redemption.user) {
+      const user = redemption.user as User
+      const wallet = await walletRepository.findOne({
+        where: { user: { id: user.id } },
+      })
+      if (wallet) {
+        wallet.points = (wallet.points || 0) + (redemption.points || 0)
+        await walletRepository.save(wallet)
+      }
+    }
+
+    res
+      .status(StatusCodes.OK)
+      .json(generalResponse(StatusCodes.OK, {}, [], 'Redemption declined'))
   },
 )
 
@@ -637,6 +737,45 @@ export const getAllSchedules = catchController(
 )
 
 export * from './donation.controller'
+
+export const getAllRedemptions = catchController(
+  async (req: Request, res: Response) => {
+    const page = parseInt(req.query.page as string, 10) || 1
+    const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+    const redemptionRepository = AppDataSource.getRepository(Redemption)
+    const [redemptions, totalCount] = await redemptionRepository.findAndCount({
+      relations: ['user'],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    })
+
+    const pagination: Pagination = {
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalCount / Number(pageSize)),
+      pageSize: Number(pageSize),
+      totalCount,
+    }
+
+    res.status(StatusCodes.OK).json(
+      generalResponse(
+        StatusCodes.OK,
+        redemptions.map((redemption) => ({
+          id: redemption.id,
+          points: redemption.points,
+          status: redemption.status,
+          type: redemption.type,
+          user: {
+            id: redemption.user?.id,
+            email: redemption.user?.email,
+          },
+        })),
+        [],
+        returnSuccess,
+        pagination,
+      ),
+    )
+  },
+)
 
 export const getAllAccounts = catchController(
   async (req: Request, res: Response) => {

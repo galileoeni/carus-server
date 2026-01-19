@@ -14,6 +14,12 @@ export enum RedemptionType {
   CASH = 'cash',
 }
 
+export enum RedemptionStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  DECLINED = 'declined',
+}
+
 @Entity({ name: 'redemptions' })
 export class Redemption {
   @PrimaryGeneratedColumn('uuid')
@@ -31,7 +37,7 @@ export class Redemption {
     precision: 10,
     scale: 2,
   })
-  amount?: number
+  points?: number
 
   @Column({ nullable: true })
   network?: string
@@ -47,6 +53,13 @@ export class Redemption {
 
   @Column({ nullable: true })
   accountName?: string
+
+  @Column({
+    type: 'enum',
+    enum: RedemptionStatus,
+    default: RedemptionStatus.PENDING,
+  })
+  status?: RedemptionStatus
 
   @CreateDateColumn()
   createdAt?: Date
