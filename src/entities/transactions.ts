@@ -1,12 +1,13 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm'
-
 import { Schedule } from './schedule'
 import { User } from './user'
 import { Wallet } from './wallet'
@@ -39,6 +40,12 @@ export class Transaction {
 
   @Column({ nullable: false })
   date?: Date
+
+  @CreateDateColumn()
+  createdAt?: Date
+
+  @UpdateDateColumn()
+  updatedAt?: Date
 
   @Column({ nullable: false, default: 'pending' })
   status?: string //fulfilled or cancelled

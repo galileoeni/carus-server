@@ -12,7 +12,6 @@ import {
   returnSuccess,
   userNotFound,
 } from '../../helpers/constants'
-import { InterswitchService } from '../../services/interswitch'
 import catchController from '../../utils/catchControllerAsyncs'
 import { formatJoiError } from '../../utils/helper'
 import {
@@ -84,16 +83,24 @@ export const redeemForAirtime = catchController(
     wallet.points = (wallet.points || 0) - points
     await walletRepository.save(wallet)
 
-    res
-      .status(StatusCodes.CREATED)
-      .json(
-        generalResponse(
-          StatusCodes.CREATED,
-          newRedemption,
-          [],
-          `${returnSuccess}, you'll be credited with ${nairapoints} airtime soon.`,
-        ),
-      )
+    const { accountNumber, bankName, accountName, ...airtimeData } =
+      newRedemption
+    res.status(StatusCodes.CREATED).json(
+      generalResponse(
+        StatusCodes.CREATED,
+        {
+          ...airtimeData,
+          user: {
+            id: user.id,
+            username: user.username,
+            firstName: user.first_name,
+            lastName: user.last_name,
+          },
+        },
+        [],
+        `${returnSuccess}, you'll be credited with ${nairapoints} airtime soon.`,
+      ),
+    )
   },
 )
 
@@ -162,15 +169,22 @@ export const redeemForCash = catchController(
     wallet.points = (wallet.points || 0) - points
     await walletRepository.save(wallet)
 
-    res
-      .status(StatusCodes.CREATED)
-      .json(
-        generalResponse(
-          StatusCodes.CREATED,
-          newRedemption,
-          [],
-          `${returnSuccess}, you'll be credited with #${nairapoints} soon.`,
-        ),
-      )
+    const { network, phoneNumber, ...cashData } = newRedemption
+    res.status(StatusCodes.CREATED).json(
+      generalResponse(
+        StatusCodes.CREATED,
+        {
+          ...cashData,
+          user: {
+            id: user.id,
+            username: user.username,
+            firstName: user.first_name,
+            lastName: user.last_name,
+          },
+        },
+        [],
+        `${returnSuccess}, you'll be credited with #${nairapoints} soon.`,
+      ),
+    )
   },
 )

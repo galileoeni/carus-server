@@ -144,7 +144,7 @@ export const loginAdmin = catchController(
 
 export const approveRedemption = catchController(
   async (req: Request, res: Response) => {
-    const { id } = req.params
+    const id = req.params.id as string
     const redemptionRepository = AppDataSource.getRepository(Redemption)
     const redemption = await redemptionRepository.findOne({
       where: { id },
@@ -187,7 +187,7 @@ export const approveRedemption = catchController(
 
 export const declineRedemption = catchController(
   async (req: Request, res: Response) => {
-    const { id } = req.params
+    const id = req.params.id as string
     const redemptionRepository = AppDataSource.getRepository(Redemption)
     const redemption = await redemptionRepository.findOne({
       where: { id },

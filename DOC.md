@@ -1,3 +1,6 @@
+# Migration Command
+`yarn run typeorm migration:generate Init -d src/data-source.ts`
+
 Account Management
 
 1. Get Account Details
@@ -278,3 +281,64 @@ Headers: Requires Authorization token.
 Query Parameters (Optional):
 page: The page number to retrieve (e.g., 1).
 pageSize: The number of items per page (e.g., 10).
+
+# Newly added endpoints
+1. Get All Redemptions
+Method: GET
+Endpoint: /api/v1/admin/redemptions
+Description: Retrieves a paginated list of all redemption requests.
+Sample Request:
+curl --location --request GET 'http://localhost:5000/api/v1/admin/redemptions?page=1&pageSize=10' \
+--header 'Authorization: Bearer <your_admin_token>'
+Sample Response:
+{
+  "status_code": 200,
+  "data": [
+    {
+      "id": "cbb3c276-8f35-4c42-992a-3a131336c9a6",
+      "points": 100,
+      "status": "pending",
+      "type": "cash",
+      "user": {
+        "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "email": "user@example.com"
+      }
+    }
+  ],
+  "errors": [],
+  "message": "Success",
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 1,
+    "pageSize": 10,
+    "totalCount": 1
+  }
+}
+2. Approve a Redemption
+Method: PUT
+Endpoint: /api/v1/admin/redemptions/approve/:id
+Description: Approves a pending redemption request.
+Sample Request:
+curl --location --request PUT 'http://localhost:5000/api/v1/admin/redemptions/approve/cbb3c276-8f35-4c42-992a-3a131336c9a6' \
+--header 'Authorization: Bearer <your_admin_token>'
+Sample Response:
+{
+  "status_code": 200,
+  "data": {},
+  "errors": [],
+  "message": "Redemption approved"
+}
+3. Decline a Redemption
+Method: PUT
+Endpoint: /api/v1/admin/redemptions/decline/:id
+Description: Declines a pending redemption request and refunds the points to the user.
+Sample Request:
+curl --location --request PUT 'http://localhost:5000/api/v1/admin/redemptions/decline/cbb3c276-8f35-4c42-992a-3a131336c9a6' \
+--header 'Authorization: Bearer <your_admin_token>'
+Sample Response:
+{
+  "status_code": 200,
+  "data": {},
+  "errors": [],
+  "message": "Redemption declined"
+}
