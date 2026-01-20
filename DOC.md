@@ -1,5 +1,5 @@
 # Migration Command
-`yarn run typeorm migration:generate Init -d src/data-source.ts`
+`yarn run typeorm migration:generate Init -d src/data-source.ts -o src/migrations`
 
 Account Management
 

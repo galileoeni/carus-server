@@ -16,7 +16,7 @@
     "migration:revert": "ts-node ./node_modules/typeorm/cli.js migration:revert -d ./src/data-source.ts",
     "schema:sync": "yarn typeorm schema:sync -- -d src/data-source.ts",
     "migration:show": "yarn typeorm migration:show -- -d src/data-source.ts",
-    "migration:generate": "yarn typeorm migration:generate -- -d src/data-source.ts",
+    "migration:generate": "yarn run typeorm migration:generate src/migrations/Init -d src/data-source.ts",
     "migration:create": "yarn typeorm migration:create",
     "prepare": "husky install",
     "lint": "eslint --ignore-path .eslintignore \"src/**/*.ts\" --fix",
