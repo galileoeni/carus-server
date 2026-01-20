@@ -1,10 +1,12 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm'
 
 import { Contribution } from './contribution'
@@ -19,7 +21,10 @@ export class Wallet {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   points?: number
 
-  @Column({ nullable: true })
+  @CreateDateColumn()
+  createdAt?: Date
+
+  @UpdateDateColumn()
   updatedAt?: Date
 
   @OneToOne(() => User, (user) => user.wallet, { onDelete: 'CASCADE' })
