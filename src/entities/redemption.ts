@@ -61,6 +61,9 @@ export class Redemption {
   })
   status?: RedemptionStatus
 
+  @Column({ nullable: true, type: 'text' })
+  description?: string
+
   @CreateDateColumn()
   createdAt?: Date
 
