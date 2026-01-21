@@ -146,8 +146,10 @@ export const approveRedemption = catchController(
   async (req: Request, res: Response) => {
     const id = req.params.id as string
     const redemptionRepository = AppDataSource.getRepository(Redemption)
+    const transactionRepository = AppDataSource.getRepository(Transaction)
     const redemption = await redemptionRepository.findOne({
       where: { id },
+      relations: ['user', 'user.wallet'],
     })
 
     if (!redemption) {
@@ -179,6 +181,22 @@ export const approveRedemption = catchController(
     redemption.status = RedemptionStatus.PAID
     await redemptionRepository.save(redemption)
 
+    // Create transaction record for approval
+    if (redemption.user) {
+      const redemptionType =
+        redemption.type === 'airtime' ? 'airtime' : 'cash'
+      const transaction = new Transaction()
+      transaction.type = 'redemption'
+      transaction.amount = redemption.points || 0
+      transaction.charges = 0
+      transaction.date = new Date()
+      transaction.status = 'fulfilled'
+      transaction.description = `Your request to convert ${redemption.points?.toFixed(2)} points to ${redemptionType} was approved and you've been credited.`
+      transaction.user = redemption.user
+      transaction.wallet = redemption.user.wallet || undefined
+      await transactionRepository.save(transaction)
+    }
+
     res
       .status(StatusCodes.OK)
       .json(generalResponse(StatusCodes.OK, {}, [], 'Redemption approved'))
@@ -189,9 +207,10 @@ export const declineRedemption = catchController(
   async (req: Request, res: Response) => {
     const id = req.params.id as string
     const redemptionRepository = AppDataSource.getRepository(Redemption)
+    const transactionRepository = AppDataSource.getRepository(Transaction)
     const redemption = await redemptionRepository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'user.wallet'],
     })
 
     if (!redemption) {
@@ -232,6 +251,20 @@ export const declineRedemption = catchController(
       if (wallet) {
         wallet.points = (wallet.points || 0) + (redemption.points || 0)
         await walletRepository.save(wallet)
+
+        // Create transaction record for decline
+        const redemptionType =
+          redemption.type === 'airtime' ? 'airtime' : 'cash'
+        const transaction = new Transaction()
+        transaction.type = 'redemption'
+        transaction.amount = redemption.points || 0
+        transaction.charges = 0
+        transaction.date = new Date()
+        transaction.status = 'cancelled'
+        transaction.description = `Your request to convert ${redemption.points?.toFixed(2)} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
+        transaction.user = user
+        transaction.wallet = wallet
+        await transactionRepository.save(transaction)
       }
     }
 

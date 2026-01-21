@@ -50,6 +50,9 @@ export class Transaction {
   @Column({ nullable: false, default: 'pending' })
   status?: string //fulfilled or cancelled
 
+  @Column({ nullable: true, type: 'text' })
+  description?: string
+
   @OneToOne(() => Schedule, (schedule) => schedule.transaction)
   schedule?: Schedule
 
