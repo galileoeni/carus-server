@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { AppDataSource } from '../../data-source'
 import { Configurations } from '../../entities/configurations'
 import { Redemption, RedemptionType } from '../../entities/redemption'
+import { Transaction } from '../../entities/transactions'
 import { User } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
 import {
@@ -82,6 +83,19 @@ export const redeemForAirtime = catchController(
 
     wallet.points = (wallet.points || 0) - points
     await walletRepository.save(wallet)
+
+    // Create transaction record
+    const transactionRepository = AppDataSource.getRepository(Transaction)
+    const transaction = new Transaction()
+    transaction.type = 'redemption'
+    transaction.amount = nairapoints
+    transaction.charges = 0
+    transaction.date = new Date()
+    transaction.status = 'pending'
+    transaction.description = `You requested to convert ${points.toFixed(2)} points to airtime.`
+    transaction.user = user
+    transaction.wallet = wallet
+    await transactionRepository.save(transaction)
 
     const { accountNumber, bankName, accountName, ...airtimeData } =
       newRedemption
@@ -168,6 +182,19 @@ export const redeemForCash = catchController(
 
     wallet.points = (wallet.points || 0) - points
     await walletRepository.save(wallet)
+
+    // Create transaction record
+    const transactionRepository = AppDataSource.getRepository(Transaction)
+    const transaction = new Transaction()
+    transaction.type = 'redemption'
+    transaction.amount = nairapoints
+    transaction.charges = 0
+    transaction.date = new Date()
+    transaction.status = 'pending'
+    transaction.description = `You requested to convert ${points.toFixed(2)} points to cash.`
+    transaction.user = user
+    transaction.wallet = wallet
+    await transactionRepository.save(transaction)
 
     const { network, phoneNumber, ...cashData } = newRedemption
     res.status(StatusCodes.CREATED).json(
