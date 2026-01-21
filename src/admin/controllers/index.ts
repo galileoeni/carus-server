@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
+import { UserRoleEnum } from '../../@types/user'
 import { AppDataSource } from '../../data-source'
 import { Configurations } from '../../entities/configurations'
 import { Redemption, RedemptionStatus } from '../../entities/redemption'
@@ -59,7 +60,10 @@ export const loginAdmin = catchController(
       where: { email: identifier },
     })
     //check if user is an admin
-    if (!(String(user?.role) === 'admin')) {
+    if (
+      user?.role !== UserRoleEnum.ADMIN &&
+      user?.role !== UserRoleEnum.SUPERADMIN
+    ) {
       return res
         .status(StatusCodes.NOT_FOUND)
         .json(
@@ -183,15 +187,16 @@ export const approveRedemption = catchController(
 
     // Create transaction record for approval
     if (redemption.user) {
-      const redemptionType =
-        redemption.type === 'airtime' ? 'airtime' : 'cash'
+      const redemptionType = redemption.type === 'airtime' ? 'airtime' : 'cash'
       const transaction = new Transaction()
       transaction.type = 'redemption'
       transaction.amount = redemption.points || 0
       transaction.charges = 0
       transaction.date = new Date()
       transaction.status = 'fulfilled'
-      transaction.description = `Your request to convert ${redemption.points?.toFixed(2)} points to ${redemptionType} was approved and you've been credited.`
+      transaction.description = `Your request to convert ${redemption.points?.toFixed(
+        2,
+      )} points to ${redemptionType} was approved and you've been credited.`
       transaction.user = redemption.user
       transaction.wallet = redemption.user.wallet || undefined
       await transactionRepository.save(transaction)
@@ -261,7 +266,9 @@ export const declineRedemption = catchController(
         transaction.charges = 0
         transaction.date = new Date()
         transaction.status = 'cancelled'
-        transaction.description = `Your request to convert ${redemption.points?.toFixed(2)} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
+        transaction.description = `Your request to convert ${redemption.points?.toFixed(
+          2,
+        )} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
         transaction.user = user
         transaction.wallet = wallet
         await transactionRepository.save(transaction)
@@ -304,7 +311,7 @@ export const getAllTransactions = catchController(
         transactions.map((transaction) => {
           const nairaAmount =
             (transaction.wallet?.points || 0) *
-            (parseFloat(pointToNaira?.value || '0'))
+            parseFloat(pointToNaira?.value || '0')
           return {
             id: transaction.id,
             amount: transaction.amount,
@@ -340,7 +347,7 @@ export const getDashboardData = catchController(
       where: { type: 'point_to_naira' },
     })
     const [userCount, scheduleCount, totalWalletPoints] = await Promise.all([
-      userRepository.count({ where: { role: 'user' } }),
+      userRepository.count({ where: { role: UserRoleEnum.USER } }),
       scheduleRepository.count(),
       walletRepository
         .createQueryBuilder('wallet')
@@ -349,7 +356,7 @@ export const getDashboardData = catchController(
     ])
     const totalWalletAmount =
       (totalWalletPoints.totalWalletPoints || 0) *
-      (parseFloat(pointToNaira?.value || '0'))
+      parseFloat(pointToNaira?.value || '0')
     const dashboardData = {
       userCount,
       scheduleCount,
@@ -819,7 +826,7 @@ export const getAllAccounts = catchController(
         wallet: true,
       },
       where: {
-        role: 'user',
+        role: UserRoleEnum.USER,
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -870,8 +877,7 @@ export const getTotalWalletAmount = catchController(
     const totalPoints = wallets.reduce((acc, wallet) => {
       return acc + Number(wallet.points)
     }, 0)
-    const totalAmount =
-      totalPoints * (parseFloat(pointToNaira?.value || '0'))
+    const totalAmount = totalPoints * parseFloat(pointToNaira?.value || '0')
 
     res.status(StatusCodes.OK).json(
       generalResponse(

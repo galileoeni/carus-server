@@ -4,7 +4,7 @@ import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { userRepository, walletRepository } from '.'
-import { UserRow } from '../../@types/user'
+import { UserRoleEnum, UserRow } from '../../@types/user'
 import { User, validateOtp } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
 import { generalResponse, passwordRegex } from '../../helpers/constants'
@@ -161,7 +161,7 @@ export const createUser = catchController(
     // generate a random whole number between 1 and 4 icluding 1 and 4
     const randomNumber = Math.floor(Math.random() * (4 - 1 + 1)) + 1
     const avatar = `https://robohash.org/${first_name}?set=${randomNumber}&size=500x500`
-    const role = 'user'
+    const role = UserRoleEnum.USER
 
     // Create Otp
     const otp = User.generateOTP()
