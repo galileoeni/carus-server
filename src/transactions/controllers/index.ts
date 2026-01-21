@@ -63,6 +63,7 @@ export const getTransactions = catchController(
               date: item.date,
               type: item.type,
               status: item.status,
+              description: item.description,
             }
           } else {
             return {
@@ -72,6 +73,7 @@ export const getTransactions = catchController(
               date: item.createdAt,
               type: item.type,
               status: item.status,
+              description: item.description,
             }
           }
         }),
