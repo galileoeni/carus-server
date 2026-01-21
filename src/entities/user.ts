@@ -21,6 +21,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm'
 
+import { UserRoleEnum } from '../@types/user'
 import { Contribution } from './contribution'
 import { Redemption } from './redemption'
 import { Schedule } from './schedule'
@@ -72,11 +73,12 @@ export class User {
   })
   username?: string | null
 
-  @Column({ nullable: true })
-  @IsDefined()
-  @IsString()
-  @IsNotEmpty()
-  role?: string
+  @Column({
+    type: 'enum',
+    enum: UserRoleEnum,
+    default: UserRoleEnum.USER,
+  })
+  role?: UserRoleEnum
 
   @Column({ nullable: false })
   @IsDefined()

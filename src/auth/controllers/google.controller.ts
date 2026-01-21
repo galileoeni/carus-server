@@ -2,7 +2,7 @@ import axios from 'axios'
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { UserRow } from '../../@types/user'
+import { UserRoleEnum, UserRow } from '../../@types/user'
 import { userRepository, walletRepository } from '../../auth/controllers'
 import { Wallet } from '../../entities/wallet'
 import { generalResponse } from '../../helpers/constants'
@@ -105,11 +105,10 @@ export const googleAuth = catchController(
       )
     }
 
-    const randomNumber = Math.floor(Math.random() * (4 - 1 + 1)) + 1
-    const role = 'user'
+    const role = UserRoleEnum.USER
     const email = googleInfo.email
     const first_name = googleInfo.given_name
-    const avatar = `https://robohash.org/${first_name}?set=${randomNumber}&size=500x500`
+    const avatar = googleInfo.picture
     const last_name = googleInfo.family_name
     const googleId = googleInfo.id
 
@@ -132,7 +131,7 @@ export const googleAuth = catchController(
           StatusCodes.CREATED,
           { email: googleInfo.email },
           [],
-          `User signed up successfully, kindly complete profile`,
+          `User signed up successfully, kindly complete your profile`,
         ),
       )
   },

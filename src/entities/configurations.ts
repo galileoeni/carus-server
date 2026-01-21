@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
 
 @Entity({ name: 'configurations' })
 export class Configurations {
@@ -8,10 +8,10 @@ export class Configurations {
   @Column({ nullable: false })
   type?: string
 
-  @Column({ nullable: false })
+  @CreateDateColumn({ nullable: false })
   createdAt?: Date
 
-  @Column({ nullable: false })
+  @UpdateDateColumn({ nullable: false })
   updatedAt?: Date
 
   @Column({ nullable: false })

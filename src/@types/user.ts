@@ -15,6 +15,12 @@ export interface UserRow {
   country_code: string
 }
 
+export enum UserRoleEnum {
+  USER = 'user',
+  ADMIN = 'admin',
+  SUPERADMIN = 'superadmin',
+}
+
 interface GoogleUserEmails {
   value: string
   verified: boolean

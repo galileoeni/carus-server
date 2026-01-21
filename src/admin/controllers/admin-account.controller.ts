@@ -3,7 +3,7 @@ import { isEmail } from 'class-validator'
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { UserRow } from '../../@types/user'
+import { UserRoleEnum, UserRow } from '../../@types/user'
 import { userRepository, walletRepository } from '../../auth/controllers'
 import { validateOtp } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
@@ -160,7 +160,7 @@ export const createAdmin = catchController(
     // generate a random whole number between 1 and 4 icluding 1 and 4
     const randomNumber = Math.floor(Math.random() * (4 - 1 + 1)) + 1
     const avatar = `https://robohash.org/${first_name}?set=${randomNumber}&size=500x500`
-    const role = 'admin'
+    const role = UserRoleEnum.ADMIN
 
     //create a new user
     const newUser = userRepository.create({
@@ -262,7 +262,7 @@ export const verifyUserEmail = catchController(
         generateToken(user.id, 'access')
       user.status = 'ACTIVE'
       await userRepository.save(user)
-      if (user.role !== 'user') {
+      if (user.role !== UserRoleEnum.USER) {
         return res
           .status(StatusCodes.FORBIDDEN)
           .json(
@@ -329,7 +329,7 @@ export const removeAdmin = async (req: Request, res: Response) => {
         .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
     }
 
-    user.role = 'user'
+    user.role = UserRoleEnum.USER
     const updatedUser = await userRepository.save(user)
 
     return res
@@ -369,7 +369,7 @@ export const assignAdmin = async (req: Request, res: Response) => {
         .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
     }
 
-    user.role = 'admin'
+    user.role = UserRoleEnum.ADMIN
     const updatedUser = await userRepository.save(user)
 
     return res
@@ -380,6 +380,86 @@ export const assignAdmin = async (req: Request, res: Response) => {
           updatedUser,
           [],
           'Admin role assigned successfully',
+        ),
+      )
+  } catch (error) {
+    console.error(error)
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json(
+        generalResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          {},
+          [],
+          'An error occurred',
+        ),
+      )
+  }
+}
+
+export const assignSuperAdmin = async (req: Request, res: Response) => {
+  const { id } = req.params
+
+  try {
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
+    }
+
+    user.role = UserRoleEnum.SUPERADMIN
+    const updatedUser = await userRepository.save(user)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          updatedUser,
+          [],
+          'SuperAdmin role assigned successfully',
+        ),
+      )
+  } catch (error) {
+    console.error(error)
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json(
+        generalResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          {},
+          [],
+          'An error occurred',
+        ),
+      )
+  }
+}
+
+export const removeSuperAdmin = async (req: Request, res: Response) => {
+  const { id } = req.params
+
+  try {
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
+    }
+
+    user.role = UserRoleEnum.ADMIN
+    const updatedUser = await userRepository.save(user)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          updatedUser,
+          [],
+          'SuperAdmin role removed, downgraded to Admin',
         ),
       )
   } catch (error) {
