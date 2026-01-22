@@ -2,13 +2,14 @@ import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import jwt from 'jsonwebtoken'
 
-import { generalResponse, userNotFound } from './constants'
-import { AppDataSource } from '../data-source'
-import { User } from '../entities/user'
 import { UserRoleEnum } from '../@types/user'
+import { User } from '../entities/user'
+import { AppDataSource } from '../data-source'
+import { generalResponse, userNotFound } from './constants'
 
 const userRepository = AppDataSource.getRepository(User)
 
+const allowedRoles = Object.values(UserRoleEnum)
 async function verifyToken(
   req: Request,
   res: Response,
@@ -48,11 +49,7 @@ async function verifyToken(
           .status(StatusCodes.NOT_FOUND)
           .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], userNotFound))
       }
-      const allowedRoles = [
-        UserRoleEnum.USER,
-        UserRoleEnum.ADMIN,
-        UserRoleEnum.SUPERADMIN,
-      ]
+
       if (user.role && !allowedRoles.includes(user.role)) {
         return res
           .status(StatusCodes.UNAUTHORIZED)
