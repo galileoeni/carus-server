@@ -28,6 +28,9 @@ import { AppDataSource } from '../../data-source'
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
 const walletRepository = AppDataSource.getRepository(Wallet)
+const transactionRepository = AppDataSource.getRepository(Transaction)
+const redemptionRepository = AppDataSource.getRepository(Redemption)
+const configurationRepository = AppDataSource.getRepository(Configurations)
 
 export const loginAdmin = catchController(
   async (req: Request, res: Response) => {
@@ -154,8 +157,6 @@ export const loginAdmin = catchController(
 export const approveRedemption = catchController(
   async (req: Request, res: Response) => {
     const id = req.params.id as string
-    const redemptionRepository = AppDataSource.getRepository(Redemption)
-    const transactionRepository = AppDataSource.getRepository(Transaction)
     const redemption = await redemptionRepository.findOne({
       where: { id },
       relations: ['user', 'user.wallet'],
@@ -193,7 +194,6 @@ export const approveRedemption = catchController(
     // Create transaction record for approval
     if (redemption.user) {
       const redemptionType = redemption.type === 'airtime' ? 'airtime' : 'cash'
-      const transactionRepository = AppDataSource.getRepository(Transaction)
       const transaction = new Transaction()
       transaction.type =
         redemption.type === 'airtime'
@@ -221,8 +221,6 @@ export const approveRedemption = catchController(
 export const declineRedemption = catchController(
   async (req: Request, res: Response) => {
     const id = req.params.id as string
-    const redemptionRepository = AppDataSource.getRepository(Redemption)
-    const transactionRepository = AppDataSource.getRepository(Transaction)
     const redemption = await redemptionRepository.findOne({
       where: { id },
       relations: ['user', 'user.wallet'],
@@ -257,14 +255,13 @@ export const declineRedemption = catchController(
     redemption.status = RedemptionStatus.CANCELLED
     await redemptionRepository.save(redemption)
 
-    const walletRepository = AppDataSource.getRepository(Wallet)
     if (redemption.user) {
       const user = redemption.user as User
       const wallet = await walletRepository.findOne({
         where: { user: { id: user.id } },
       })
       if (wallet) {
-        wallet.points = (wallet.points || 0) + (redemption.points || 0)
+        wallet.points = (wallet.points ?? 0) + (redemption.points ?? 0)
         await walletRepository.save(wallet)
 
         // Create transaction record for decline
@@ -299,8 +296,6 @@ export const getAllTransactions = catchController(
   async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string, 10) || 1
     const pageSize = parseInt(req.query.pageSize as string, 10) || 10
-    const transactionRepository = AppDataSource.getRepository(Transaction)
-    const configurationRepository = AppDataSource.getRepository(Configurations)
     const [transactions, totalCount] = await transactionRepository.findAndCount(
       {
         relations: ['user', 'wallet'],
@@ -352,11 +347,6 @@ export const getAllTransactions = catchController(
 
 export const getDashboardData = catchController(
   async (req: Request, res: Response) => {
-    const userRepository = AppDataSource.getRepository(User)
-    const scheduleRepository = AppDataSource.getRepository(Schedule)
-    const walletRepository = AppDataSource.getRepository(Wallet)
-
-    const configurationRepository = AppDataSource.getRepository(Configurations)
     const pointToNaira = await configurationRepository.findOne({
       where: { type: 'point_to_naira' },
     })
@@ -391,8 +381,6 @@ export const acceptSchedule = catchController(
     if (typeof id !== 'string') {
       return res.status(400).json({ message: 'Invalid ID format' })
     }
-
-    const scheduleRepository = AppDataSource.getRepository(Schedule)
 
     const existingSchedule = await scheduleRepository.findOne({
       where: { id: id }, // TypeScript is happy now because 'id' is strictly a string
@@ -573,11 +561,6 @@ export const fulfillSchedule = catchController(
           ),
         )
     }
-
-    const scheduleRepository = AppDataSource.getRepository(Schedule)
-    const walletRepository = AppDataSource.getRepository(Wallet)
-    const transactionRepository = AppDataSource.getRepository(Transaction)
-    const configurationRepository = AppDataSource.getRepository(Configurations)
 
     const point_to_plastic = await configurationRepository.findOne({
       where: { type: 'point_to_plastic' },
@@ -800,7 +783,6 @@ export const getAllRedemptions = catchController(
   async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string, 10) || 1
     const pageSize = parseInt(req.query.pageSize as string, 10) || 10
-    const redemptionRepository = AppDataSource.getRepository(Redemption)
     const [redemptions, totalCount] = await redemptionRepository.findAndCount({
       relations: ['user'],
       skip: (page - 1) * pageSize,
@@ -887,7 +869,6 @@ export const getAllAccounts = catchController(
 export const getTotalWalletAmount = catchController(
   async (req: Request, res: Response) => {
     const wallets = await walletRepository.find()
-    const configurationRepository = AppDataSource.getRepository(Configurations)
     const pointToNaira = await configurationRepository.findOne({
       where: { type: 'point_to_naira' },
     })
