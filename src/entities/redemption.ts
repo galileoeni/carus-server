@@ -16,8 +16,11 @@ export enum RedemptionType {
 
 export enum RedemptionStatus {
   PENDING = 'pending',
-  PAID = 'paid',
+  FULFILLED = 'fulfilled',
+  CANCELLED = 'cancelled',
   DECLINED = 'declined',
+  APPROVED = 'approved',
+  PAID = 'paid'
 }
 
 @Entity({ name: 'redemptions' })

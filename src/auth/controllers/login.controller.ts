@@ -59,19 +59,19 @@ export const loginUser = catchController(
           where: { phone: normalizePhoneNumber(identifier) },
         })
 
-    //check if user is an admin
-    if (user?.role !== 'user') {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            errorMessages.INVALID_CREDENTIALS_ERROR,
-          ),
-        )
-    }
+    //check if user is an admin // for now, allow admin to login
+    // if (user?.role !== 'user') {
+    //   return res
+    //     .status(StatusCodes.NOT_FOUND)
+    //     .json(
+    //       generalResponse(
+    //         StatusCodes.NOT_FOUND,
+    //         {},
+    //         [],
+    //         errorMessages.INVALID_CREDENTIALS_ERROR,
+    //       ),
+    //     )
+    // }
 
     if (!user) {
       return res
@@ -100,7 +100,7 @@ export const loginUser = catchController(
         )
     }
 
-    //check if usr is verified
+    //check if user account is disabled
     if (user.isDisabled) {
       return res
         .status(StatusCodes.UNAUTHORIZED)

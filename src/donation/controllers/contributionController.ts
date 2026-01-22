@@ -5,7 +5,12 @@ import { User } from 'src/entities/user'
 import { AppDataSource } from '../../data-source'
 import { Contribution } from '../../entities/contribution'
 import { Donation } from '../../entities/donation'
-import { Transaction } from '../../entities/transactions'
+import {
+  Transaction,
+  TransactionType,
+  TransactionDirection,
+  TransactionStatus,
+} from '../../entities/transactions'
 import { Wallet } from '../../entities/wallet'
 import {
   donationNotFound,
@@ -80,11 +85,12 @@ export const createContribution = catchController(
     // Create transaction record
     const transactionRepository = AppDataSource.getRepository(Transaction)
     const transaction = new Transaction()
-    transaction.type = 'donation'
+    transaction.type = TransactionType.DONATION
+    transaction.direction = TransactionDirection.DEBIT
     transaction.amount = amount
     transaction.charges = 0
     transaction.date = new Date()
-    transaction.status = 'fulfilled'
+    transaction.status = TransactionStatus.FULFILLED
     transaction.description = `You donated ${amount.toFixed(2)} of your points to ${campaign.title} campaign.`
     transaction.user = user
     transaction.wallet = wallet

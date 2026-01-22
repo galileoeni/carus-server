@@ -4,7 +4,12 @@ import { StatusCodes } from 'http-status-codes'
 import { AppDataSource } from '../../data-source'
 import { Configurations } from '../../entities/configurations'
 import { Redemption, RedemptionType } from '../../entities/redemption'
-import { Transaction } from '../../entities/transactions'
+import {
+  Transaction,
+  TransactionType,
+  TransactionDirection,
+  TransactionStatus,
+} from '../../entities/transactions'
 import { User } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
 import {
@@ -87,12 +92,15 @@ export const redeemForAirtime = catchController(
     // Create transaction record
     const transactionRepository = AppDataSource.getRepository(Transaction)
     const transaction = new Transaction()
-    transaction.type = 'redemption'
+    transaction.type = TransactionType.AIRTIME
+    transaction.direction = TransactionDirection.DEBIT
     transaction.amount = nairapoints
     transaction.charges = 0
     transaction.date = new Date()
-    transaction.status = 'pending'
-    transaction.description = `You requested to convert ${points.toFixed(2)} points to airtime.`
+    transaction.status = TransactionStatus.PENDING
+    transaction.description = `You requested to convert ${points.toFixed(
+      2,
+    )} points to airtime.`
     transaction.user = user
     transaction.wallet = wallet
     await transactionRepository.save(transaction)
@@ -186,12 +194,15 @@ export const redeemForCash = catchController(
     // Create transaction record
     const transactionRepository = AppDataSource.getRepository(Transaction)
     const transaction = new Transaction()
-    transaction.type = 'redemption'
+    transaction.type = TransactionType.CASH
+    transaction.direction = TransactionDirection.DEBIT
     transaction.amount = nairapoints
     transaction.charges = 0
     transaction.date = new Date()
-    transaction.status = 'pending'
-    transaction.description = `You requested to convert ${points.toFixed(2)} points to cash.`
+    transaction.status = TransactionStatus.PENDING
+    transaction.description = `You requested to convert ${points.toFixed(
+      2,
+    )} points to cash.`
     transaction.user = user
     transaction.wallet = wallet
     await transactionRepository.save(transaction)

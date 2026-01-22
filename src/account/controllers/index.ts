@@ -49,8 +49,9 @@ export const getAccount = catchController(
     const pointToNaira = await configurationRepository.findOne({
       where: { type: 'point_to_naira' },
     })
-    const nairaAmount =
-      (wallet?.points || 0) * (parseFloat(pointToNaira?.value || '0'))
+    const points = wallet?.points ?? 0
+    const rate = parseFloat(pointToNaira?.value ?? '1')
+    const nairaAmount = points / rate
 
     res.status(StatusCodes.OK).json(
       generalResponse(
@@ -72,9 +73,11 @@ export const getAccount = catchController(
           created_at: user.createdAt,
           last_updated: user.updatedAt,
           wallet: {
+            id: wallet?.id,
             naira_amount: nairaAmount,
             points: wallet?.points,
             last_transaction_time: wallet?.updatedAt,
+            point_to_naira: pointToNaira?.value,
           },
         },
         [],
