@@ -11,7 +11,6 @@ Sentry.init({
 })
 
 import bodyParser from 'body-parser'
-// import { RedisStore } from 'connect-redis'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
@@ -21,7 +20,6 @@ import path from 'path'
 import createMemoryStore from 'memorystore'
 import 'reflect-metadata'
 
-// import redisClient from './config/redis'
 import { AppDataSource } from './data-source'
 import mainRoutes from './routes'
 import adminRoutes from './routes/adminRoutes'
@@ -30,16 +28,6 @@ import { getUptime } from './utils/helper'
 const MemoryStore = createMemoryStore(session)
 const startServer = async () => {
   const app: express.Application = express()
-
-  // redisClient
-  //   .connect()
-  //   .then(() => {
-  //     console.log('Redis Connection Initialized')
-  //   })
-  //   .catch((err) => {
-  //     console.error('Error during Redis Connection', err)
-  //     throw err
-  //   })
 
   AppDataSource.initialize()
     .then(() => {
@@ -80,18 +68,6 @@ const startServer = async () => {
       uptime: getUptime(),
     }
 
-    // try {
-    //   const redisPing = await redisClient.ping()
-    //   healthCheck.redis = redisPing === 'PONG' ? 'up' : 'down'
-    //   console.log('HealthCheck.redis:', healthCheck.redis)
-    //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // } catch (err: any) {
-    //   healthCheck.redis = 'down'
-    //   console.log('HealthCheck.redis:', healthCheck.redis)
-    //   console.log(`Redis health check failed: ${err.message} `, err)
-    //   Sentry.captureException(err)
-    // }
-
     try {
       const status = AppDataSource.isInitialized
       healthCheck.database = 'up'
@@ -102,16 +78,13 @@ const startServer = async () => {
       console.log('AppDataSource.isInitialized:', healthCheck.database)
       console.error('Error during Data Source Initialization', err)
     }
-
-    const allHealthy = Object.values(healthCheck).every(
-      (v) => v === 'up' || typeof v === 'number' || typeof v === 'string',
-    )
+    const allHealthy =
+      healthCheck.server === 'up' && healthCheck.database === 'up'
     console.log('AllHealthy:', allHealthy)
 
     return res.status(allHealthy ? 200 : 503).json(healthCheck)
   })
 
-  // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
   app.use('/v1', mainRoutes)
   app.use('/v1/admin', adminRoutes)
   app.set('view engine', 'pug')

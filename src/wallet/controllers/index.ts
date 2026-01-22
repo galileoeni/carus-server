@@ -40,8 +40,9 @@ export const getWallet = catchController(
       where: { type: 'point_to_naira' },
     })
 
-    const nairaAmount =
-      ((wallet?.points || 0) * (parseFloat(pointToNaira?.value || '0'))).toFixed(2)
+    const points = wallet?.points ?? 0
+    const rate = parseFloat(pointToNaira?.value ?? '1')
+    const nairaAmount = points / rate
 
     res.status(StatusCodes.OK).json(
       generalResponse(

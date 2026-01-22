@@ -3,15 +3,20 @@ import {
   RedemptionStatus,
   RedemptionType,
 } from '../entities/redemption'
+import {
+  Transaction,
+  TransactionType,
+  TransactionDirection,
+  TransactionStatus,
+} from '../entities/transactions'
 import bcrypt from 'bcryptjs'
 
-import { UserRoleEnum } from '../@types/user'
 import { CategoryEnum, MaterialEnum } from '../@types/schedule'
+import { UserRoleEnum } from '../@types/user'
 import { Configurations } from '../entities/configurations'
 import { Contribution } from '../entities/contribution'
 import { Donation } from '../entities/donation'
 import { Schedule } from '../entities/schedule'
-import { Transaction } from '../entities/transactions'
 import { User } from '../entities/user'
 import { Wallet } from '../entities/wallet'
 import { AppDataSource } from '../data-source'
@@ -58,7 +63,7 @@ const seedDatabase = async () => {
     // Seed users
     console.log('👥 Seeding users...')
     const adminUser = userRepository.create({
-      email: 'carusadmin@mailinator.com',
+      email: 'carus+admin@mailinator.com',
       password: await bcrypt.hash('Password@101', 10),
       username: 'admin',
       first_name: 'Admin',
@@ -77,14 +82,15 @@ const seedDatabase = async () => {
     await userRepository.save(adminUser)
 
     const superadminUser = userRepository.create({
-      email: 'carussuperadmin@mailinator.com',
+      email: 'carus+superadmin@mailinator.com',
       password: await bcrypt.hash('Password@101', 10),
       username: 'superadmin',
       first_name: 'SuperAdmin',
       last_name: 'Rahmlad',
       role: UserRoleEnum.SUPERADMIN,
       status: 'ACTIVE',
-      avatar: 'https://res.cloudinary.com/dxvpnxbbl/image/upload/v1768740636/avatars/ahitxk0wszv2c8miqsgg.jpg',
+      avatar:
+        'https://res.cloudinary.com/dxvpnxbbl/image/upload/v1768740636/avatars/ahitxk0wszv2c8miqsgg.jpg',
       phone: '+2348109672784',
       address: '456 Admin Street',
       city: 'Lagos',
@@ -94,16 +100,29 @@ const seedDatabase = async () => {
     })
     await userRepository.save(superadminUser)
 
+    const realUsers = [
+      { firstName: 'Chinedu', lastName: 'Okafor', gender: 'Male' },
+      { firstName: 'Amina', lastName: 'Bello', gender: 'Female' },
+      { firstName: 'Tunde', lastName: 'Bakare', gender: 'Male' },
+      { firstName: 'Ngozi', lastName: 'Eze', gender: 'Female' },
+      { firstName: 'Emeka', lastName: 'Onuoha', gender: 'Male' },
+      { firstName: 'Fatima', lastName: 'Dangote', gender: 'Female' },
+      { firstName: 'Femi', lastName: 'Adeyemi', gender: 'Male' },
+      { firstName: 'Chioma', lastName: 'Okeke', gender: 'Female' },
+      { firstName: 'Yakubu', lastName: 'Gowon', gender: 'Male' },
+      { firstName: 'Zainab', lastName: 'Ahmed', gender: 'Female' },
+    ]
     const regularUsers = []
     const randomNumber = Math.floor(Math.random() * (4 - 1 + 1)) + 1
     for (let i = 1; i <= 10; i++) {
+      const person = realUsers[i - 1]
       const avatar = `https://robohash.org/user${i}?set=${randomNumber}&size=200x200`
       const user = userRepository.create({
         email: `user${i}@example.com`,
         password: await bcrypt.hash('Password@123', 10),
-        username: `user${i}`,
-        first_name: `User`,
-        last_name: `#${i}`,
+        username: person.firstName.toLowerCase() + i,
+        first_name: person.firstName,
+        last_name: person.lastName,
         role: UserRoleEnum.USER,
         status: 'ACTIVE',
         avatar: avatar,
@@ -111,7 +130,7 @@ const seedDatabase = async () => {
         address: `${i} Main Street`,
         city: 'Lagos',
         region: 'Lagos',
-        gender: i % 2 === 0 ? 'Female' : 'Male',
+        gender: person.gender,
         dob: new Date(
           1995 - (i % 10),
           Math.floor(Math.random() * 12),
@@ -194,11 +213,12 @@ const seedDatabase = async () => {
 
         // Create transaction for contribution
         const transaction = transactionRepository.create({
-          type: 'donation',
+          type: TransactionType.DONATION,
+          direction: TransactionDirection.DEBIT,
           amount: amount,
           charges: 0,
           date: new Date(),
-          status: 'fulfilled',
+          status: TransactionStatus.FULFILLED,
           description: `You donated ${amount.toFixed(2)} of your points to ${
             donation.title
           } campaign.`,
@@ -215,8 +235,8 @@ const seedDatabase = async () => {
     const airtimeNetworks = ['MTN', 'Airtel', 'Glo', '9mobile']
     const statuses = [
       RedemptionStatus.PENDING,
-      RedemptionStatus.PAID,
-      RedemptionStatus.DECLINED,
+      RedemptionStatus.FULFILLED,
+      RedemptionStatus.CANCELLED,
     ]
 
     for (let i = 0; i < regularUsers.length; i++) {
@@ -251,9 +271,13 @@ const seedDatabase = async () => {
               : undefined,
           bankName:
             type === RedemptionType.CASH
-              ? ['GT Bank', 'Access Bank','UBA','Sterling Bank', 'Zenith Bank'][
-                  Math.floor(Math.random() * 4)
-                ]
+              ? [
+                  'GT Bank',
+                  'Access Bank',
+                  'UBA',
+                  'Sterling Bank',
+                  'Zenith Bank',
+                ][Math.floor(Math.random() * 4)]
               : undefined,
           accountName:
             type === RedemptionType.CASH
@@ -264,22 +288,26 @@ const seedDatabase = async () => {
 
         // Create transaction for redemption request
         const transaction = transactionRepository.create({
-          type: 'redemption',
-          amount: points * 10, // Using 10 as conversion rate
+          type:
+            type === RedemptionType.AIRTIME
+              ? TransactionType.AIRTIME
+              : TransactionType.CASH,
+          direction: TransactionDirection.DEBIT,
+          amount: points / 10, // Using 10 as conversion rate
           charges: 0,
           date: new Date(),
           status:
-            status === RedemptionStatus.PAID
-              ? 'fulfilled'
-              : status === RedemptionStatus.DECLINED
-              ? 'cancelled'
-              : 'pending',
+            status === RedemptionStatus.FULFILLED
+              ? TransactionStatus.FULFILLED
+              : status === RedemptionStatus.CANCELLED
+              ? TransactionStatus.CANCELLED
+              : TransactionStatus.PENDING,
           description:
             status === RedemptionStatus.PENDING
               ? `You requested to convert ${points.toFixed(
                   2,
                 )} points to ${type}.`
-              : status === RedemptionStatus.PAID
+              : status === RedemptionStatus.FULFILLED
               ? `Your request to convert ${points.toFixed(
                   2,
                 )} points to ${type} was approved and you've been credited.`
@@ -330,11 +358,15 @@ const seedDatabase = async () => {
 
         // Create transaction for schedule
         const transaction = transactionRepository.create({
-          type: category,
+          type:
+            category === 'pickup'
+              ? TransactionType.PICKUP
+              : TransactionType.DROPOFF,
+          direction: TransactionDirection.CREDIT,
           amount: amount,
           charges: 0,
           date: new Date(),
-          status: 'fulfilled',
+          status: TransactionStatus.COMPLETED,
           description: `Recycling ${category}: ${amount} units of ${material}`,
           user: user,
           wallet: wallets[i + 1],
@@ -357,11 +389,11 @@ const seedDatabase = async () => {
     console.log(`   - Multiple Schedules for recycling activities`)
     console.log(`   - Transaction history for all activities`)
     console.log('\n🔐 Admin Credentials:')
-    console.log(`   Email: carus@mailinator.com`)
+    console.log(`   Email: carus+admin@mailinator.com`)
     console.log(`   Password: Password@101`)
     console.log('\n🔐 SuperAdmin Credentials:')
-    console.log(`   Email: superadmin@carus.com`)
-    console.log(`   Password: SuperAdmin@123`)
+    console.log(`   Email: carus+superadmin@mailinator.com`)
+    console.log(`   Password: Password@101`)
     console.log('\n👤 Sample User Credentials:')
     console.log(`   Email: user1@example.com`)
     console.log(`   Password: Password@123`)

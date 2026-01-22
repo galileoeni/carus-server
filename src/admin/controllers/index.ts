@@ -1,15 +1,9 @@
-import bcrypt from 'bcryptjs'
-import { Request, Response } from 'express'
-import { StatusCodes } from 'http-status-codes'
-
-import { UserRoleEnum } from '../../@types/user'
-import { AppDataSource } from '../../data-source'
-import { Configurations } from '../../entities/configurations'
-import { Redemption, RedemptionStatus } from '../../entities/redemption'
-import { Schedule } from '../../entities/schedule'
-import { Transaction } from '../../entities/transactions'
-import { User } from '../../entities/user'
-import { Wallet } from '../../entities/wallet'
+import {
+  Transaction,
+  TransactionType,
+  TransactionDirection,
+  TransactionStatus,
+} from '../../entities/transactions'
 import {
   generalResponse,
   invalidCredentials,
@@ -17,8 +11,19 @@ import {
   returnSuccess,
   userNotFound,
 } from '../../helpers/constants'
+import bcrypt from 'bcryptjs'
+import { Request, Response } from 'express'
+import { StatusCodes } from 'http-status-codes'
+
+import { UserRoleEnum } from '../../@types/user'
+import { Configurations } from '../../entities/configurations'
+import { Redemption, RedemptionStatus } from '../../entities/redemption'
+import { Schedule } from '../../entities/schedule'
+import { User } from '../../entities/user'
+import { Wallet } from '../../entities/wallet'
 import generateToken from '../../helpers/generateToken'
 import catchController from '../../utils/catchControllerAsyncs'
+import { AppDataSource } from '../../data-source'
 
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
@@ -182,18 +187,23 @@ export const approveRedemption = catchController(
         )
     }
 
-    redemption.status = RedemptionStatus.PAID
+    redemption.status = RedemptionStatus.FULFILLED
     await redemptionRepository.save(redemption)
 
     // Create transaction record for approval
     if (redemption.user) {
       const redemptionType = redemption.type === 'airtime' ? 'airtime' : 'cash'
+      const transactionRepository = AppDataSource.getRepository(Transaction)
       const transaction = new Transaction()
-      transaction.type = 'redemption'
+      transaction.type =
+        redemption.type === 'airtime'
+          ? TransactionType.AIRTIME
+          : TransactionType.CASH
+      transaction.direction = TransactionDirection.DEBIT
       transaction.amount = redemption.points || 0
       transaction.charges = 0
       transaction.date = new Date()
-      transaction.status = 'fulfilled'
+      transaction.status = TransactionStatus.FULFILLED
       transaction.description = `Your request to convert ${redemption.points?.toFixed(
         2,
       )} points to ${redemptionType} was approved and you've been credited.`
@@ -244,7 +254,7 @@ export const declineRedemption = catchController(
         )
     }
 
-    redemption.status = RedemptionStatus.DECLINED
+    redemption.status = RedemptionStatus.CANCELLED
     await redemptionRepository.save(redemption)
 
     const walletRepository = AppDataSource.getRepository(Wallet)
@@ -261,11 +271,15 @@ export const declineRedemption = catchController(
         const redemptionType =
           redemption.type === 'airtime' ? 'airtime' : 'cash'
         const transaction = new Transaction()
-        transaction.type = 'redemption'
+        transaction.type =
+          redemption.type === 'airtime'
+            ? TransactionType.AIRTIME
+            : TransactionType.CASH
+        transaction.direction = TransactionDirection.DEBIT
         transaction.amount = redemption.points || 0
         transaction.charges = 0
         transaction.date = new Date()
-        transaction.status = 'cancelled'
+        transaction.status = TransactionStatus.CANCELLED
         transaction.description = `Your request to convert ${redemption.points?.toFixed(
           2,
         )} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
@@ -702,14 +716,18 @@ export const fulfillSchedule = catchController(
     const transaction = new Transaction()
     transaction.user = user
     transaction.date = new Date(Date.now())
-    transaction.type = existingSchedule.category
+    transaction.type =
+      existingSchedule.category === 'pickup'
+        ? TransactionType.PICKUP
+        : TransactionType.DROPOFF
+    transaction.direction = TransactionDirection.CREDIT
     transaction.wallet = wallet
     transaction.schedule = existingSchedule
     transaction.amount = calculatedNairaAmount
     transaction.charges = 0
-    transaction.status = 'completed'
+    transaction.status = TransactionStatus.COMPLETED
 
-    transactionRepository.save(transaction)
+    await transactionRepository.save(transaction)
 
     existingSchedule.status = 'completed'
     existingSchedule.amount = calculatedNairaAmount
