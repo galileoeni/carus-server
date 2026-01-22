@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 import { generalResponse, userNotFound } from './constants'
 import { AppDataSource } from '../data-source'
 import { User } from '../entities/user'
+import { UserRoleEnum } from '../@types/user'
 
 const userRepository = AppDataSource.getRepository(User)
 
@@ -47,7 +48,12 @@ async function verifyToken(
           .status(StatusCodes.NOT_FOUND)
           .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], userNotFound))
       }
-      if (user.role !== 'user') {
+      const allowedRoles = [
+        UserRoleEnum.USER,
+        UserRoleEnum.ADMIN,
+        UserRoleEnum.SUPERADMIN,
+      ]
+      if (user.role && !allowedRoles.includes(user.role)) {
         return res
           .status(StatusCodes.UNAUTHORIZED)
           .json(
