@@ -8,7 +8,8 @@ import { User } from '../entities/user'
 import { UserRoleEnum } from '../@types/user'
 
 const userRepository = AppDataSource.getRepository(User)
-
+const allowedRoles = [UserRoleEnum.ADMIN, UserRoleEnum.SUPERADMIN]
+      
 async function verifyAdmin(
   req: Request,
   res: Response,
@@ -48,10 +49,6 @@ async function verifyAdmin(
           .status(StatusCodes.NOT_FOUND)
           .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], userNotFound))
       }
-      const allowedRoles = [
-        UserRoleEnum.ADMIN,
-        UserRoleEnum.SUPERADMIN,
-      ]
       if (user.role && !allowedRoles.includes(user.role)) {
         return res
           .status(StatusCodes.UNAUTHORIZED)
