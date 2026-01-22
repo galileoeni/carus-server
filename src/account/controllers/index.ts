@@ -51,7 +51,7 @@ export const getAccount = catchController(
     })
     const points = wallet?.points ?? 0
     const rate = parseFloat(pointToNaira?.value ?? '1')
-    const nairaAmount = points / rate
+    const nairaAmount = rate > 0 ? points / rate : 0
 
     res.status(StatusCodes.OK).json(
       generalResponse(
