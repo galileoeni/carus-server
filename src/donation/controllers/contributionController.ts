@@ -58,11 +58,9 @@ export const createContribution = catchController(
         })
 
         if (!campaign) {
-          return {
-            error: true,
-            status: StatusCodes.NOT_FOUND,
-            message: donationNotFound,
-          }
+          const error: any = new Error(donationNotFound)
+          error.statusCode = StatusCodes.NOT_FOUND
+          throw error
         }
 
         // 2. Fetch Wallet with a pessimistic_write lock to prevent concurrent deduction issues
@@ -84,7 +82,6 @@ export const createContribution = catchController(
         
         // 4. Save Updates
         await transactionalEntityManager.save(wallet)
-        await transactionalEntityManager.save(campaign)
 
         const config = await transactionalEntityManager.findOne(Configurations, {
               where: { type: 'point_to_naira' },
@@ -191,10 +188,16 @@ export const oldCreateContribution = catchController(
     const campaign = await donationRepository.findOne({
       where: { id: campaignId },
     })
+    // if (!campaign) {
+    //   return res
+    //     .status(StatusCodes.NOT_FOUND)
+    //     .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
+    // }
+
     if (!campaign) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
+      const error: any = new Error(donationNotFound)
+      error.statusCode = StatusCodes.NOT_FOUND
+      throw error
     }
 
     const wallet = await walletRepository.findOne({
