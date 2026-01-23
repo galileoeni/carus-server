@@ -282,6 +282,47 @@ Query Parameters (Optional):
 page: The page number to retrieve (e.g., 1).
 pageSize: The number of items per page (e.g., 10).
 
+Campaign Management
+19. Get All Campaigns
+Method: GET
+Path: /api/v1/admin/donation/campaigns
+Description: Retrieves a list of all donation campaigns.
+Headers: Requires Authorization token.
+20. Get Campaign by ID
+Method: GET
+Path: /api/v1/admin/donation/campaigns/:id
+Description: Retrieves a single donation campaign by its ID.
+Headers: Requires Authorization token.
+Path Parameters:
+id: The UUID of the donation campaign.
+21. Create Campaign
+Method: POST
+Path: /api/v1/admin/donation/campaigns
+Description: Creates a new donation campaign.
+Headers: Requires Authorization token.
+Request Body (form-data):
+image: (file) The campaign's image.
+title: (text) The campaign's title.
+description: (text) The campaign's description.
+22. Update Campaign
+Method: PUT
+Path: /api/v1/admin/donation/campaigns/:id
+Description: Updates an existing donation campaign.
+Headers: Requires Authorization token.
+Path Parameters:
+id: The UUID of the donation campaign.
+Request Body (form-data):
+image: (file) The campaign's new image.
+title: (text) The campaign's new title.
+description: (text) The campaign's new description.
+23. Delete Campaign
+Method: DELETE
+Path: /api/v1/admin/donation/campaigns/:id
+Description: Deletes a donation campaign.
+Headers: Requires Authorization token.
+Path Parameters:
+id: The UUID of the donation campaign.
+
 # Newly added endpoints
 1. Get All Redemptions
 Method: GET
