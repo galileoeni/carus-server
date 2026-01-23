@@ -38,11 +38,9 @@ const performRedemption = async (
     })
 
     if (!config?.value) {
-      return {
-        error: true,
-        status: StatusCodes.BAD_REQUEST,
-        message: 'Point to naira rate not configured',
-      }
+      const error: any = new Error('Point to naira rate not configured')
+      error.statusCode = StatusCodes.BAD_REQUEST
+      throw error
     }
 
     // 2. Fetch Wallet with Pessimistic Lock (Prevents race conditions/double spending)
@@ -62,7 +60,7 @@ const performRedemption = async (
     // 3. Calculation Logic
     const conversionRate = Number(config.value)
     const nairaAmount =
-      conversionRate !== 0
+      !isNaN(conversionRate) && conversionRate !== 0
         ? Math.round((points / conversionRate) * 100) / 100
         : 0
 
@@ -103,7 +101,12 @@ const performRedemption = async (
 
 export const redeemForAirtime = catchController(
   async (req: Request, res: Response) => {
-    const user = req.user as User
+    const user: User | undefined = req.user
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, '', [], userNotFound))
+    }
     const { error } = redeemForAirtimeSchema.validate(req.body)
     if (error) {
       const { details, message } = formatJoiError(error)
