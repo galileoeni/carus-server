@@ -89,9 +89,10 @@ const performRedemption = async (
       direction: TransactionDirection.DEBIT,
       amount: nairaAmount,
       status: TransactionStatus.PENDING,
-      description: `Requested conversion of ${points} points to ${type}.`,
+      description: `You requested to redeem ${points} of your points to ${type}.`,
       user,
       wallet,
+      date: new Date()
     })
     await transactionalEntityManager.save(transaction)
 

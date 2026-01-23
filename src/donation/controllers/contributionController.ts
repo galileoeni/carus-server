@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import { User } from 'src/entities/user'
+import { User } from '../../entities/user'
 
 import { AppDataSource } from '../../data-source'
 import { Contribution } from '../../entities/contribution'
@@ -21,6 +21,7 @@ import {
 } from '../../helpers/constants'
 import catchController from '../../utils/catchControllerAsyncs'
 import { createContributionSchema } from '../../utils/validators/donation'
+import { Configurations } from '../../entities/configurations'
 
 export const createContribution = catchController(
   async (req: Request, res: Response) => {
@@ -85,9 +86,18 @@ export const createContribution = catchController(
         await transactionalEntityManager.save(wallet)
         await transactionalEntityManager.save(campaign)
 
+        const config = await transactionalEntityManager.findOne(Configurations, {
+              where: { type: 'point_to_naira' },
+        })
+        const conversionRate = Number(config?.value)
+        const nairaAmount =
+          conversionRate !== 0
+            ? Math.round((amount / conversionRate) * 100) / 100
+            : 0
+
         // 5. Create Contribution Record
         const newContribution = new Contribution()
-        newContribution.amount = amount
+        newContribution.amount = nairaAmount
         newContribution.user = user
         newContribution.wallet = wallet
         newContribution.donation = campaign
@@ -99,7 +109,7 @@ export const createContribution = catchController(
         const transaction = new Transaction()
         transaction.type = TransactionType.DONATION
         transaction.direction = TransactionDirection.DEBIT
-        transaction.amount = amount
+        transaction.amount = nairaAmount
         transaction.charges = 0
         transaction.date = new Date()
         transaction.status = TransactionStatus.FULFILLED
