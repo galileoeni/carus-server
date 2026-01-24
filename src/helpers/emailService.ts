@@ -18,7 +18,8 @@ const createTransporter = async () => {
   return nodemailer.createTransport({ ...config })
 }
 
-const emailPath = path.join(__dirname, '../../views/')
+const emailPath = path.join(process.cwd(), 'views')
+// const emailPath = path.join(__dirname, '../../views/')
 
 export const sendVerificationOtp = async (
   first_name: string,
