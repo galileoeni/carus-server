@@ -16,7 +16,6 @@ const createTransporter = async () => {
 }
 
 const emailPath = path.join(__dirname, '../../views/')
-// const emailPath = path.join(__dirname, '../../views/');
 
 export const sendVerificationOtp = async (
   first_name: string,
@@ -29,7 +28,7 @@ export const sendVerificationOtp = async (
   try {
     const html = pug.renderFile(path.join(emailPath, 'verifyEmail.pug'), {
       first_name,
-      subject: 'Welcome to Carus recycling',
+      subject: 'Welcome to Carus Recycling',
       otp,
     })
     const mailOptions = {
@@ -37,9 +36,9 @@ export const sendVerificationOtp = async (
       subject: 'Verify your email',
       to: email,
       html,
-    }
-    // console.log('send verification code reached')
-    ;(await transporter).sendMail(mailOptions)
+    };
+    // console.log('send verification code reached');
+    (await transporter).sendMail(mailOptions)
   } catch (error) {
     console.error(error)
   }
@@ -68,38 +67,38 @@ export const sendContactMessage = async (
       subject: `${first_name} ${last_name}: <${user_email}>`,
       to: process.env.CONTACT_EMAIL_RECEPIENT,
       text: message,
-    }
-    ;(await transporter).sendMail(mailOptions)
+    };
+    (await transporter).sendMail(mailOptions)
   } catch (error) {
     console.error(error)
   }
 }
 
-export const sendPasswordResetOtp = async (
-  first_name: string,
-  email: string,
-  otp: string,
-) => {
-  const transporter: Promise<
-    nodemailer.Transporter<SMTPTransport.SentMessageInfo>
-  > = createTransporter()
-  try {
-    const html = pug.renderFile(path.join(emailPath, 'resetPassword.pug'), {
-      first_name,
-      subject: 'Use this code to reset your password',
-      otp,
-    })
-    const mailOptions = {
-      from: `CARUS RECYCLING <${process.env.EMAIL}>`,
-      subject: 'Password reset',
-      to: email,
-      html,
-    }
-    ;(await transporter).sendMail(mailOptions)
-  } catch (error) {
-    console.error(error)
-  }
-}
+// export const sendPasswordResetOtp = async (
+//   first_name: string,
+//   email: string,
+//   otp: string,
+// ) => {
+//   const transporter: Promise<
+//     nodemailer.Transporter<SMTPTransport.SentMessageInfo>
+//   > = createTransporter()
+//   try {
+//     const html = pug.renderFile(path.join(emailPath, 'resetPassword.pug'), {
+//       first_name,
+//       subject: 'Use this code to reset your password',
+//       otp,
+//     })
+//     const mailOptions = {
+//       from: `CARUS RECYCLING <${process.env.EMAIL}>`,
+//       subject: 'Password reset',
+//       to: email,
+//       html,
+//     };
+//     (await transporter).sendMail(mailOptions)
+//   } catch (error) {
+//     console.error(error)
+//   }
+// }
 
 export const sendPasswordResetToken = async (
   first_name: string,
@@ -112,7 +111,7 @@ export const sendPasswordResetToken = async (
   try {
     const html = pug.renderFile(path.join(emailPath, 'resetPassword.pug'), {
       first_name,
-      subject: 'Use this code to reset your password',
+      subject: 'Use this link to reset your password',
       link: `${process.env.FRONTEND_URL}/reset-password?token=${token}`,
     })
     const mailOptions = {
@@ -120,8 +119,8 @@ export const sendPasswordResetToken = async (
       subject: 'Password reset',
       to: email,
       html,
-    }
-    ;(await transporter).sendMail(mailOptions)
+    };
+    (await transporter).sendMail(mailOptions)
   } catch (error) {
     console.error(error)
   }
