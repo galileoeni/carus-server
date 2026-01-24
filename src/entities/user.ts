@@ -33,11 +33,11 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id?: string
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, type: 'varchar' })
   first_name?: string
 
-  @Column({ nullable: false })
-  last_name?: string
+  @Column({ nullable: true, type: 'varchar' })
+  last_name?: string | null
 
   @Column({ nullable: true, type: 'varchar' })
   address?: string | null
