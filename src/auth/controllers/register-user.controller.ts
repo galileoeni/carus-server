@@ -165,7 +165,7 @@ export const createUser = catchController(
 
     // Create Otp
     const otp = User.generateOTP()
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000)
+    const otpExpires = new Date(Date.now() + 10.5 * 60 * 1000)
 
     //create a new user
     const newUser = userRepository.create({
