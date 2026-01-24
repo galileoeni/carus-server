@@ -41,7 +41,7 @@ export const sendVerificationOtp = async (
       html,
     };
     // console.log('send verification code reached');
-    (await transporter).sendMail(mailOptions)
+    await (await transporter).sendMail(mailOptions)
   } catch (error) {
     console.error(error)
   }
