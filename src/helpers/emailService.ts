@@ -13,6 +13,9 @@ const createTransporter = async () => {
       user: process.env.EMAIL,
       pass: process.env.GOOGLE_APP_PASSWORD,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
   }
 
   return nodemailer.createTransport({ ...config })
@@ -26,9 +29,10 @@ export const sendVerificationOtp = async (
   email: string,
   otp: string,
 ) => {
-  const transporter: Promise<
-    nodemailer.Transporter<SMTPTransport.SentMessageInfo>
-  > = createTransporter()
+  // const transporter: Promise<
+  //   nodemailer.Transporter<SMTPTransport.SentMessageInfo>
+  //   > = createTransporter();
+  const transporterInstance = await createTransporter()
   try {
     const html = pug.renderFile(path.join(emailPath, 'verifyEmail.pug'), {
       first_name,
@@ -42,7 +46,18 @@ export const sendVerificationOtp = async (
       html,
     };
     // console.log('send verification code reached');
-    const info = await (await transporter).sendMail(mailOptions)
+    const info = await new Promise((resolve, reject) => {
+      transporterInstance.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('SMTP Error:', err)
+          reject(err)
+        } else {
+          console.log('Email sent successfully:', info.messageId)
+          resolve(info)
+        }
+      })
+    })
+    // const info = await (await transporter).sendMail(mailOptions);
     return info;
   } catch (error) {
     console.error('Email Service Error:', error)
@@ -56,9 +71,10 @@ export const sendContactMessage = async (
   last_name: string,
   message: string,
 ) => {
-  const transporter: Promise<
-    nodemailer.Transporter<SMTPTransport.SentMessageInfo>
-  > = createTransporter()
+  const transporterInstance = await createTransporter();
+  // const transporter: Promise<
+  //   nodemailer.Transporter<SMTPTransport.SentMessageInfo>
+  // > = createTransporter()
   try {
     // const html = pug.renderFile(
     //     path.join(emailPath, 'verifyEmail.pug'),
@@ -74,7 +90,18 @@ export const sendContactMessage = async (
       to: process.env.CONTACT_EMAIL_RECEPIENT,
       text: message,
     };
-    const info = await (await transporter).sendMail(mailOptions);
+    // const info = await (await transporter).sendMail(mailOptions);
+    const info = await new Promise((resolve, reject) => {
+      transporterInstance.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('SMTP Error:', err)
+          reject(err)
+        } else {
+          console.log('Email sent successfully:', info.messageId)
+          resolve(info)
+        }
+      })
+    })
     return info;
   } catch (error) {
     console.error('Email Service Error:', error)
@@ -113,9 +140,10 @@ export const sendPasswordResetToken = async (
   email: string,
   token: string,
 ) => {
-  const transporter: Promise<
-    nodemailer.Transporter<SMTPTransport.SentMessageInfo>
-  > = createTransporter()
+  const transporterInstance = await createTransporter()
+  // const transporter: Promise<
+  //   nodemailer.Transporter<SMTPTransport.SentMessageInfo>
+  // > = createTransporter();
   try {
     const html = pug.renderFile(path.join(emailPath, 'resetPassword.pug'), {
       first_name,
@@ -128,7 +156,18 @@ export const sendPasswordResetToken = async (
       to: email,
       html,
     };
-    const info = await (await transporter).sendMail(mailOptions)
+    // const info = await (await transporter).sendMail(mailOptions);
+    const info = await new Promise((resolve, reject) => {
+      transporterInstance.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('SMTP Error:', err)
+          reject(err)
+        } else {
+          console.log('Email sent successfully:', info.messageId)
+          resolve(info)
+        }
+      })
+    });
     return info;
   } catch (error) {
     console.error('Email Service Error:', error)
