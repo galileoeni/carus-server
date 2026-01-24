@@ -123,7 +123,7 @@ export const sendPasswordResetToken = async (
       to: email,
       html,
     };
-    (await transporter).sendMail(mailOptions)
+    await (await transporter).sendMail(mailOptions)
   } catch (error) {
     console.error(error)
   }
