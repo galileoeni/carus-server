@@ -7,8 +7,8 @@ const createTransporter = async () => {
   const config: Options = {
     service: 'gmail',
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,
     auth: {
       user: process.env.EMAIL,
       pass: process.env.GOOGLE_APP_PASSWORD,
@@ -52,7 +52,7 @@ export const sendVerificationOtp = async (
           console.error('SMTP Error:', err)
           reject(err)
         } else {
-          console.log('Email sent successfully:', info.messageId)
+          // console.log('Email sent successfully:', info.messageId)
           resolve(info)
         }
       })
