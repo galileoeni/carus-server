@@ -3,29 +3,38 @@ import SMTPTransport, { Options } from 'nodemailer/lib/smtp-transport'
 import path from 'path'
 import pug from 'pug'
 
+const config: Options = {
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  logger: true,
+  debug: true,
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.GOOGLE_APP_PASSWORD,
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+}
 const createTransporter = async () => {
-  const config: Options = {
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    logger: true,
-    debug: true,
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.GOOGLE_APP_PASSWORD,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  }
-
   return nodemailer.createTransport({ ...config })
 }
 
 // const emailPath = path.join(process.cwd(), 'views')
 const emailPath = path.join(__dirname, '../../views/')
+
+const transporter = nodemailer.createTransport(config);
+
+// Verify connection configuration
+transporter.verify((error) => {
+  if (error) {
+    console.error('Email service SMTP connection failed:', error);
+  } else {
+    console.log('Email service is ready to send messages');
+  }
+});
 
 export const sendVerificationOtp = async (
   first_name: string,
