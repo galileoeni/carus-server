@@ -4,19 +4,19 @@ import path from 'path'
 import pug from 'pug'
 
 const config: Options = {
-  service: 'gmail',
+  // service: 'gmail',
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
   logger: true,
   debug: true,
   auth: {
     user: process.env.EMAIL,
     pass: process.env.GOOGLE_APP_PASSWORD,
   },
-  tls: {
-    rejectUnauthorized: false,
-  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 }
 const createTransporter = async () => {
   return nodemailer.createTransport({ ...config })
