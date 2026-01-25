@@ -184,11 +184,11 @@ export const createUser = catchController(
       isGoogleUser: false,
     })
 
-    //Send Otp
-    await sendVerificationOtp(first_name, email, otp)
-
     //save the user
     await userRepository.save(newUser)
+
+    //Send Otp
+    sendVerificationOtp(first_name, email, otp)
 
     const maskedEmail = emailFormat(email)
     return res
