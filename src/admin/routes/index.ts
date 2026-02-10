@@ -29,6 +29,7 @@ import {
 } from '../controllers/admin-management.controller'
 import adminConfigurationRoutes from '../../configurations/routes/adminRoutes'
 import verifyAdmin from '../../helpers/verifyAdmin'
+import notificationRoutes from './notification.routes'
 
 const router = Router()
 
@@ -57,5 +58,6 @@ router.use('/configurations', verifyAdmin, adminConfigurationRoutes)
 router.get('/redemptions', verifyAdmin, getAllRedemptions)
 router.put('/redemptions/approve/:id', verifyAdmin, approveRedemption)
 router.put('/redemptions/decline/:id', verifyAdmin, declineRedemption)
+router.use('/notifications', notificationRoutes)
 
 export default router
