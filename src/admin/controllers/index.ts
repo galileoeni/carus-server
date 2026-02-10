@@ -81,7 +81,7 @@ export const loginAdmin = catchController(
             StatusCodes.NOT_FOUND,
             {},
             [],
-            'User with this email or username does not exist',
+            invalidCredentials,
           ),
         )
     }
@@ -94,7 +94,7 @@ export const loginAdmin = catchController(
             StatusCodes.NOT_FOUND,
             {},
             [],
-            'User with this email or username does not exist',
+            invalidCredentials,
           ),
         )
     }
