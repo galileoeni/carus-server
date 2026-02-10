@@ -120,6 +120,15 @@ export class User {
   @Column({ default: false })
   isDisabled?: boolean
 
+  @Column({ nullable: true, type: 'varchar' })
+  fcmToken?: string | null
+
+  @Column({ default: 0, type: 'int' })
+  failedLoginAttempts?: number
+
+  @Column({ nullable: true, type: 'timestamp' })
+  lastFailedLogin?: Date | null
+
   @OneToMany(() => Schedule, (orders) => orders.user)
   orders?: Schedule[]
 

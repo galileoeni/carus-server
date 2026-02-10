@@ -24,6 +24,8 @@ import { Wallet } from '../../entities/wallet'
 import catchController from '../../utils/catchControllerAsyncs'
 import { formatJoiError } from '../../utils/helper'
 import { AppDataSource } from '../../data-source'
+import { notificationService } from '../../services/notification.service'
+import { NotificationType } from '../../entities/notification'
 
 const performRedemption = async (
   user: User,
@@ -134,6 +136,13 @@ export const redeemForAirtime = catchController(
     // Now savedRedemption and nairaAmount exist because we returned them from the helper
     const { savedRedemption, nairaAmount } = result.data!
 
+    await notificationService.createNotification(
+      user,
+      'Redemption Requested',
+      `Your request to redeem ${points} points for airtime has been received and is pending approval.`,
+      NotificationType.TRANSACTION_SUCCESS,
+    )
+
     return res.status(StatusCodes.CREATED).json(
       generalResponse(
         StatusCodes.CREATED,
@@ -234,6 +243,13 @@ export const oldRedeemForAirtime = catchController(
     transaction.wallet = wallet
     await transactionRepository.save(transaction)
 
+    await notificationService.createNotification(
+      user,
+      'Redemption Requested',
+      `Your request to redeem ${points} points for airtime has been received and is pending approval.`,
+      NotificationType.TRANSACTION_SUCCESS,
+    )
+
     const { accountNumber, bankName, accountName, ...airtimeData } =
       newRedemption
     res.status(StatusCodes.CREATED).json(
@@ -282,6 +298,13 @@ export const redeemForCash = catchController(
     }
 
     const { savedRedemption, nairaAmount } = result.data!
+
+    await notificationService.createNotification(
+      user,
+      'Redemption Requested',
+      `Your request to redeem ${points} points for cash has been received and is pending approval.`,
+      NotificationType.TRANSACTION_SUCCESS,
+    )
 
     return res.status(StatusCodes.CREATED).json(
       generalResponse(
@@ -381,6 +404,13 @@ export const oldRedeemForCash = catchController(
     transaction.user = user
     transaction.wallet = wallet
     await transactionRepository.save(transaction)
+
+    await notificationService.createNotification(
+      user,
+      'Redemption Requested',
+      `Your request to redeem ${points} points for cash has been received and is pending approval.`,
+      NotificationType.TRANSACTION_SUCCESS,
+    )
 
     const { network, phoneNumber, ...cashData } = newRedemption
     res.status(StatusCodes.CREATED).json(

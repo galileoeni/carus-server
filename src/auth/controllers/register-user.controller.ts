@@ -13,6 +13,8 @@ import { errorMessages } from '../../helpers/error-messages'
 import generateToken from '../../helpers/generateToken'
 import catchController from '../../utils/catchControllerAsyncs'
 import { emailFormat } from '../../utils/email'
+import { notificationService } from '../../services/notification.service'
+import { NotificationType } from '../../entities/notification'
 
 export const createUser = catchController(
   async (req: Request, res: Response) => {
@@ -296,6 +298,14 @@ export const verifyUserEmail = catchController(
         wallet.updatedAt = new Date(Date.now())
         await walletRepository.save(wallet)
       }
+
+      await notificationService.createNotification(
+        user,
+        'Welcome to Carus!',
+        `Hi ${user.first_name}, welcome to Carus. We are glad to have you on board.`,
+        NotificationType.WELCOME,
+      )
+
       return res.status(StatusCodes.OK).json(
         generalResponse(
           StatusCodes.OK,

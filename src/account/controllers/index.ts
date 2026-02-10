@@ -19,6 +19,8 @@ import {
   deleteFromCloudinary,
   uploadToCloudinary,
 } from '../../utils/cloudinary'
+import { notificationService } from '../../services/notification.service'
+import { NotificationType } from '../../entities/notification'
 
 const regionList = Object.values(RegionEnum).join(', ')
 const cityList = Object.values(CityEnum).join(', ')
@@ -401,6 +403,14 @@ export const editProfile = catchController(
     user.updatedAt = new Date(Date.now())
 
     await userRepository.save(user)
+
+    await notificationService.createNotification(
+      user,
+      'Profile Updated',
+      'Your profile has been updated successfully.',
+      NotificationType.PROFILE_UPDATE,
+    )
+
     return res.status(StatusCodes.OK).json(
       generalResponse(
         StatusCodes.OK,
@@ -560,6 +570,14 @@ export const changePassword = catchController(
 
     user.password = await bcrypt.hash(newPassword, 10)
     await AppDataSource.getRepository(User).save(user)
+
+    await notificationService.createNotification(
+      user,
+      'Password Changed',
+      'Your password has been changed successfully. If you did not do this, please contact support.',
+      NotificationType.PASSWORD_CHANGE,
+    )
+
     res
       .status(StatusCodes.OK)
       .json(

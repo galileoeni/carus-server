@@ -17,10 +17,13 @@ import express from 'express'
 import session from 'express-session'
 import passport from 'passport'
 import path from 'path'
+import http from 'http'
 import createMemoryStore from 'memorystore'
 import 'reflect-metadata'
 
 import { AppDataSource } from './data-source'
+import { socketService } from './services/socket.service'
+import { reminderService } from './services/reminder.service'
 import mainRoutes from './routes'
 import adminRoutes from './routes/adminRoutes'
 import { getUptime } from './utils/helper'
@@ -89,7 +92,12 @@ const startServer = async () => {
   app.use('/v1/admin', adminRoutes)
   app.set('view engine', 'pug')
   app.set('views', path.join(__dirname + '../views'))
-  const server = app.listen(env.PORT, env.HOST, () => {
+
+  const httpServer = http.createServer(app)
+  socketService.init(httpServer)
+  reminderService.init()
+
+  const server = httpServer.listen(env.PORT, env.HOST, () => {
     console.log(`Server is running at: http://localhost:${env.PORT}`)
   })
 

@@ -24,6 +24,8 @@ import { Wallet } from '../../entities/wallet'
 import generateToken from '../../helpers/generateToken'
 import catchController from '../../utils/catchControllerAsyncs'
 import { AppDataSource } from '../../data-source'
+import { notificationService } from '../../services/notification.service'
+import { NotificationType } from '../../entities/notification'
 
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
@@ -191,6 +193,15 @@ export const approveRedemption = catchController(
     redemption.status = RedemptionStatus.FULFILLED
     await redemptionRepository.save(redemption)
 
+    await notificationService.createNotification(
+      redemption.user,
+      'Redemption Approved',
+      `Your request to convert ${redemption.points?.toFixed(
+        2,
+      )} points was approved.`,
+      NotificationType.TRANSACTION_SUCCESS,
+    )
+
     // Create transaction record for approval
     if (redemption.user) {
       const redemptionType = redemption.type === 'airtime' ? 'airtime' : 'cash'
@@ -254,6 +265,15 @@ export const declineRedemption = catchController(
 
     redemption.status = RedemptionStatus.CANCELLED
     await redemptionRepository.save(redemption)
+
+    await notificationService.createNotification(
+      redemption.user,
+      'Redemption Declined',
+      `Your request to convert ${redemption.points?.toFixed(
+        2,
+      )} points was declined and points have been refunded.`,
+      NotificationType.TRANSACTION_FAILED,
+    )
 
     if (redemption.user) {
       const user = redemption.user as User
@@ -716,6 +736,13 @@ export const fulfillSchedule = catchController(
     existingSchedule.amount = calculatedNairaAmount
 
     await scheduleRepository.save(existingSchedule)
+
+    await notificationService.createNotification(
+      user,
+      'Points Earned!',
+      `You have earned ${calculatedPoints} points from your ${existingSchedule.category}.`,
+      NotificationType.POINTS_EARNED,
+    )
 
     return res
       .status(StatusCodes.OK)

@@ -10,6 +10,8 @@ import { sendVerificationOtp } from '../../helpers/emailService'
 import { errorMessages } from '../../helpers/error-messages'
 import generateToken from '../../helpers/generateToken'
 import catchController from '../../utils/catchControllerAsyncs'
+import { notificationService } from '../../services/notification.service'
+import { NotificationType } from '../../entities/notification'
 
 export const loginUser = catchController(
   async (req: Request, res: Response) => {
@@ -138,6 +140,19 @@ export const loginUser = catchController(
     //Compare the client's password with the one in the db
     const isPasswordValid = await bcrypt.compare(password, user.password)
     if (!isPasswordValid) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1
+      user.lastFailedLogin = new Date()
+      await userRepository.save(user)
+
+      if (user.failedLoginAttempts >= 3) {
+        await notificationService.createNotification(
+          user,
+          'Security Alert',
+          'There have been multiple failed login attempts on your account.',
+          NotificationType.SECURITY_ALERT,
+        )
+      }
+
       return res
         .status(StatusCodes.UNAUTHORIZED)
         .json(
@@ -151,6 +166,9 @@ export const loginUser = catchController(
     }
     //What to do if the authentication is successful
     if (isPasswordValid && user.id) {
+      user.failedLoginAttempts = 0
+      await userRepository.save(user)
+
       const { token: refresh_token, token_expires: refresh_token_expires } =
         generateToken(user.id, 'refresh')
       const { token: access_token, token_expires: access_token_expires } =
