@@ -7,7 +7,7 @@ class NotificationService {
   private notificationRepository = AppDataSource.getRepository(Notification)
 
   public async createNotification(
-    user: User | null,
+    user: User | undefined,
     title: string,
     message: string,
     type: NotificationType,
@@ -41,7 +41,7 @@ class NotificationService {
     title: string,
     message: string,
   ): Promise<void> {
-    await this.createNotification(null, title, message, NotificationType.ANNOUNCEMENT)
+    await this.createNotification(undefined, title, message, NotificationType.ANNOUNCEMENT)
   }
 
   // Placeholder for push notification logic (e.g., using firebase-admin)

@@ -51,7 +51,7 @@ export const getNotifications = catchController(
 
 export const markAsRead = catchController(
   async (req: Request, res: Response) => {
-    const { id } = req.params
+    const id = req.params.id as string
     const user = req.user as User
 
     const notification = await notificationRepository.findOne({
