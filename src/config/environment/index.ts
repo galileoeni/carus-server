@@ -10,6 +10,8 @@ const env = {
   AUTH: {
     JWT_SECRET: process.env.JWT_SECRET,
   },
+  ALLOWED_ORIGINS:
+    'https://carus.com.ng, https://carus-frontend.vercel.app, http://localhost:3000',
   // getDevBaseUrl() {
   //     const self = env
   //     if(self.ENVIRONMENT.development || self.ENVIRONMENT.test){

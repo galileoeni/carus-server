@@ -10,7 +10,7 @@ class SocketService {
   public init(server: HttpServer): void {
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: '*', // Adjust as needed for production
+        origin: env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : 'http://localhost:3000',
         methods: ['GET', 'POST'],
       },
     })
@@ -20,7 +20,7 @@ class SocketService {
 
       socket.on('authenticate', (token: string) => {
         try {
-          const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string }
+          const decoded = jwt.verify(token, env.AUTH.JWT_SECRET) as { id: string }
           const userId = decoded.id
           this.userSockets.set(userId, socket.id)
           console.log(`User ${userId} authenticated with socket ${socket.id}`)
