@@ -383,3 +383,122 @@ Sample Response:
   "errors": [],
   "message": "Redemption declined"
 }
+
+# Notifications
+
+## User Endpoints
+
+### 1. Get All Notifications
+- **Method:** GET
+- **Path:** `/api/v1/account/notifications`
+- **Description:** Retrieves a paginated list of notifications for the authenticated user and the unread count.
+- **Query Parameters:**
+  - `page`: (optional) Page number (default: 1)
+  - `pageSize`: (optional) Items per page (default: 10)
+- **Sample Request:**
+  `curl --location --request GET 'http://localhost:5000/api/v1/account/notifications?page=1&pageSize=10' --header 'Authorization: Bearer <token>'`
+- **Sample Response:**
+```json
+{
+  "status_code": 200,
+  "data": {
+    "notifications": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "title": "Welcome to Carus!",
+        "message": "Hi John, welcome to Carus. We are glad to have you on board.",
+        "type": "welcome",
+        "isRead": false,
+        "createdAt": "2024-05-20T10:00:00.000Z"
+      }
+    ],
+    "unreadCount": 1
+  },
+  "errors": [],
+  "message": "Success",
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 1,
+    "pageSize": 10,
+    "totalCount": 1
+  }
+}
+```
+
+### 2. Mark Notification as Read
+- **Method:** PATCH
+- **Path:** `/api/v1/account/notifications/:id/read`
+- **Description:** Marks a specific notification as read.
+- **Sample Request:**
+  `curl --location --request PATCH 'http://localhost:5000/api/v1/account/notifications/550e8400-e29b-41d4-a716-446655440000/read' --header 'Authorization: Bearer <token>'`
+- **Sample Response:**
+```json
+{
+  "status_code": 200,
+  "data": {},
+  "errors": [],
+  "message": "Notification marked as read"
+}
+```
+
+### 3. Update FCM Token
+- **Method:** POST
+- **Path:** `/api/v1/account/notifications/token`
+- **Description:** Updates the user's FCM token for push notifications.
+- **Request Body:**
+```json
+{
+  "token": "your-fcm-token-here"
+}
+```
+- **Sample Response:**
+```json
+{
+  "status_code": 200,
+  "data": {},
+  "errors": [],
+  "message": "FCM token updated successfully"
+}
+```
+
+## Admin Endpoints
+
+### 1. Send Broadcast Notification
+- **Method:** POST
+- **Path:** `/api/v1/admin/notifications/push`
+- **Description:** Sends a push notification announcement to all users.
+- **Request Body:**
+```json
+{
+  "title": "System Update",
+  "message": "The system will be down for maintenance at midnight."
+}
+```
+- **Sample Response:**
+```json
+{
+  "status_code": 200,
+  "data": {},
+  "errors": [],
+  "message": "Broadcast notification sent successfully"
+}
+```
+
+## Socket.io Implementation
+
+### Connection & Authentication
+Clients should connect to the root namespace. After connection, they **must** authenticate to receive private notifications.
+
+- **Event:** `authenticate`
+- **Direction:** Client -> Server
+- **Data:** `"<your_jwt_access_token>"`
+- **Description:** Validates the user's session.
+
+- **Event:** `authenticated`
+- **Direction:** Server -> Client
+- **Data:** `{ "success": true }` or `{ "success": false, "message": "..." }`
+
+### Receiving Notifications
+- **Event:** `notification`
+- **Direction:** Server -> Client
+- **Data:** Notification object (see Get All Notifications response).
