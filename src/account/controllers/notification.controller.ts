@@ -1,13 +1,20 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
+import { Brackets, IsNull } from 'typeorm'
 
 import { AppDataSource } from '../../data-source'
 import { Notification } from '../../entities/notification'
+import { NotificationRead } from '../../entities/notification-read'
 import { User } from '../../entities/user'
-import { generalResponse, returnSuccess, Pagination } from '../../helpers/constants'
+import {
+  generalResponse,
+  Pagination,
+  returnSuccess,
+} from '../../helpers/constants'
 import catchController from '../../utils/catchControllerAsyncs'
 
 const notificationRepository = AppDataSource.getRepository(Notification)
+const notificationReadRepository = AppDataSource.getRepository(NotificationRead)
 const userRepository = AppDataSource.getRepository(User)
 
 export const getNotifications = catchController(
@@ -16,15 +23,46 @@ export const getNotifications = catchController(
     const page = parseInt(req.query.page as string, 10) || 1
     const pageSize = parseInt(req.query.pageSize as string, 10) || 10
 
-    const [notifications, totalCount] = await notificationRepository.findAndCount({
-      where: { user: { id: user.id } },
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+    const queryBuilder = notificationRepository
+      .createQueryBuilder('notification')
+      .leftJoinAndSelect('notification.user', 'user')
+      .leftJoinAndSelect(
+        'notification.reads',
+        'read',
+        'read.userId = :userId AND read.userEmail = :userEmail',
+        { userId: user.id, userEmail: user.email },
+      )
+      .where('user.id = :userId OR notification.userId IS NULL', {
+        userId: user.id,
+      })
+      .orderBy('notification.createdAt', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
 
-    const unreadCount = await notificationRepository.count({
-      where: { user: { id: user.id }, isRead: false },
+    const [notifications, totalCount] = await queryBuilder.getManyAndCount()
+
+    const unreadCount = await notificationRepository
+      .createQueryBuilder('notification')
+      .leftJoin('notification.user', 'user')
+      .leftJoin(
+        'notification.reads',
+        'read',
+        'read.userId = :userId AND read.userEmail = :userEmail',
+        { userId: user.id, userEmail: user.email },
+      )
+      .where(
+        new Brackets((qb) => {
+          qb.where('user.id = :userId AND notification.isRead = false', {
+            userId: user.id,
+          }).orWhere('user.id IS NULL AND read.id IS NULL')
+        }),
+      )
+      .getCount()
+
+    const mappedNotifications = notifications.map((n) => {
+      const isRead = n.user ? n.isRead : !!(n.reads && n.reads.length > 0)
+      const { reads: _reads, ...notificationData } = n
+      return { ...notificationData, isRead }
     })
 
     const pagination: Pagination = {
@@ -38,7 +76,7 @@ export const getNotifications = catchController(
       generalResponse(
         StatusCodes.OK,
         {
-          notifications,
+          notifications: mappedNotifications,
           unreadCount,
         },
         [],
@@ -55,7 +93,8 @@ export const markAsRead = catchController(
     const user = req.user as User
 
     const notification = await notificationRepository.findOne({
-      where: { id, user: { id: user.id } },
+      where: [{ id, user: { id: user.id } }, { id, user: IsNull() }],
+      relations: ['user'],
     })
 
     if (!notification) {
@@ -71,8 +110,23 @@ export const markAsRead = catchController(
         )
     }
 
-    notification.isRead = true
-    await notificationRepository.save(notification)
+    if (notification.user) {
+      notification.isRead = true
+      await notificationRepository.save(notification)
+    } else {
+      const existingRead = await notificationReadRepository.findOne({
+        where: {
+          notification: { id: notification.id },
+          user: { id: user.id, email: user.email },
+        },
+      })
+      if (!existingRead) {
+        const newRead = new NotificationRead()
+        newRead.notification = notification
+        newRead.user = user
+        await notificationReadRepository.save(newRead)
+      }
+    }
 
     return res
       .status(StatusCodes.OK)
