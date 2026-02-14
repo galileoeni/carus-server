@@ -2,11 +2,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
 
+import { NotificationRead } from './notification-read'
 import { User } from './user'
 
 export enum NotificationType {
@@ -42,8 +45,21 @@ export class Notification {
   @Column({ default: false })
   isRead?: boolean
 
+  @Column({ nullable: true })
+  userId?: string
+
+  @Column({ nullable: true })
+  userEmail?: string
+
   @ManyToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn([
+    { name: 'userId', referencedColumnName: 'id' },
+    { name: 'userEmail', referencedColumnName: 'email' },
+  ])
   user?: User
+
+  @OneToMany(() => NotificationRead, (read) => read.notification)
+  reads?: NotificationRead[]
 
   @CreateDateColumn()
   createdAt?: Date
