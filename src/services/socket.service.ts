@@ -6,11 +6,14 @@ import env from '../config/environment'
 class SocketService {
   private io: SocketIOServer | null = null
   private userSockets: Map<string, string> = new Map()
+  private socketToUser: Map<string, string> = new Map()
 
   public init(server: HttpServer): void {
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : 'http://localhost:3000',
+        origin: env.ALLOWED_ORIGINS
+          ? env.ALLOWED_ORIGINS.split(',')
+          : 'http://localhost:3000',
         methods: ['GET', 'POST'],
       },
     })
@@ -20,14 +23,20 @@ class SocketService {
 
       socket.on('authenticate', (token: string) => {
         try {
-          const decoded = jwt.verify(token, env.AUTH.JWT_SECRET) as { id: string }
+          const decoded = jwt.verify(token, env.AUTH.JWT_SECRET) as {
+            id: string
+          }
           const userId = decoded.id
-          this.userSockets.set(userId, socket.id)
+          this.userSockets.set(userId, socket.id);
+          this.socketToUser.set(socket.id, userId);
           console.log(`User ${userId} authenticated with socket ${socket.id}`)
           socket.emit('authenticated', { success: true })
         } catch (error) {
           console.error('Socket authentication failed:', error)
-          socket.emit('authenticated', { success: false, message: 'Invalid token' })
+          socket.emit('authenticated', {
+            success: false,
+            message: 'Invalid token',
+          })
         }
       })
 

@@ -3,8 +3,6 @@ import * as Sentry from '@sentry/node'
 import env from './config/environment/index'
 Sentry.init({
   dsn: 'https://01c7dc98a8e0749f6e417433d1d60c9b@o4510017484881920.ingest.us.sentry.io/4510017487634432',
-  // Setting this option to true will send default PII data to Sentry.
-  // For example, automatic IP address collection on events
   sendDefaultPii: true,
   environment: env.ENVIRONMENT,
   enableLogs: true,
@@ -23,7 +21,7 @@ import 'reflect-metadata'
 
 import { AppDataSource } from './data-source'
 import { socketService } from './services/socket.service'
-import { reminderService } from './services/reminder.service'
+// import { reminderService } from './services/reminder.service'
 import mainRoutes from './routes'
 import adminRoutes from './routes/adminRoutes'
 import { getUptime } from './utils/helper'
@@ -95,7 +93,7 @@ const startServer = async () => {
 
   const httpServer = http.createServer(app)
   socketService.init(httpServer)
-  reminderService.init()
+  // reminderService.init()
 
   const server = httpServer.listen(env.PORT, env.HOST, () => {
     console.log(`Server is running at: http://localhost:${env.PORT}`)
