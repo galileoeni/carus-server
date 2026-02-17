@@ -163,7 +163,7 @@ Request Body:
 "email": "newadmin@example.com",
 "password": "a-strong-password",
 "phone": "08012345678",
-"gender": "male",
+"gender": "Male",
 "dob": "1990-01-01",
 "country_code": "NG"
 } 4. Assign Admin Role
