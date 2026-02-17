@@ -166,7 +166,9 @@ Request Body:
 "gender": "Male",
 "dob": "1990-01-01",
 "country_code": "NG"
-} 4. Assign Admin Role
+}
+
+4. Assign Admin Role
 
 Method: PATCH
 Path: /api/v1/admin/assign-admin/:id
