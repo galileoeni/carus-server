@@ -204,7 +204,9 @@ Description: Sends a password reset link to an admin's email address.
 Request Body:
 {
 "email": "admin@example.com"
-} 9. Admin Reset Password
+}
+
+9. Admin Reset Password
 
 Method: POST
 Path: /api/v1/auth/password/reset
