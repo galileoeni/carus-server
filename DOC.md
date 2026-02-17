@@ -161,7 +161,11 @@ Request Body:
 "first_name": "New",
 "last_name": "Admin",
 "email": "newadmin@example.com",
-"password": "a-strong-password"
+"password": "a-strong-password",
+"phone": "08012345678",
+"gender": "male",
+"dob": "1990-01-01",
+"country_code": "NG"
 } 4. Assign Admin Role
 
 Method: PATCH
@@ -195,7 +199,7 @@ pageSize: The number of items per page (e.g., 10).
 Password Management 8. Admin Forgot Password
 
 Method: POST
-Path: /api/v1/admin/forgot-password
+Path: /api/v1/auth/forgot-password
 Description: Sends a password reset link to an admin's email address.
 Request Body:
 {
@@ -203,13 +207,12 @@ Request Body:
 } 9. Admin Reset Password
 
 Method: POST
-Path: /api/v1/admin/reset-password/:token
+Path: /api/v1/auth/password/reset
 Description: Resets the admin's password using the token from the reset email.
-Path Parameters:
-token: The password reset token from the email link.
 Request Body:
 {
-"password": "your-new-strong-password"
+"token": "your-reset-token",
+"newPassword": "your-new-strong-password"
 }
 Schedule Management 10. Accept Schedule
 
@@ -285,19 +288,19 @@ pageSize: The number of items per page (e.g., 10).
 Campaign Management
 19. Get All Campaigns
 Method: GET
-Path: /api/v1/admin/donation/campaigns
+Path: /api/v1/donation/campaigns
 Description: Retrieves a list of all donation campaigns.
 Headers: Requires Authorization token.
 20. Get Campaign by ID
 Method: GET
-Path: /api/v1/admin/donation/campaigns/:id
+Path: /api/v1/donation/campaigns/:id
 Description: Retrieves a single donation campaign by its ID.
 Headers: Requires Authorization token.
 Path Parameters:
 id: The UUID of the donation campaign.
 21. Create Campaign
 Method: POST
-Path: /api/v1/admin/donation/campaigns
+Path: /api/v1/donation/campaigns
 Description: Creates a new donation campaign.
 Headers: Requires Authorization token.
 Request Body (form-data):
@@ -306,7 +309,7 @@ title: (text) The campaign's title.
 description: (text) The campaign's description.
 22. Update Campaign
 Method: PUT
-Path: /api/v1/admin/donation/campaigns/:id
+Path: /api/v1/donation/campaigns/:id
 Description: Updates an existing donation campaign.
 Headers: Requires Authorization token.
 Path Parameters:
@@ -317,11 +320,48 @@ title: (text) The campaign's new title.
 description: (text) The campaign's new description.
 23. Delete Campaign
 Method: DELETE
-Path: /api/v1/admin/donation/campaigns/:id
+Path: /api/v1/donation/campaigns/:id
 Description: Deletes a donation campaign.
 Headers: Requires Authorization token.
 Path Parameters:
 id: The UUID of the donation campaign.
+
+Configuration Management
+24. Get Point to Naira Configuration
+Method: GET
+Path: /api/v1/admin/configurations/point-to-naira
+Description: Retrieves the current point-to-naira conversion rate.
+Headers: Requires Authorization token.
+25. Set Point to Naira Configuration
+Method: POST
+Path: /api/v1/admin/configurations/point-to-naira
+Description: Sets the point-to-naira conversion rate.
+Headers: Requires Authorization token.
+Request Body (json):
+{
+"value": 100
+}
+26. Create Configuration
+Method: POST
+Path: /api/v1/admin/configurations
+Description: Creates a new configuration setting.
+Headers: Requires Authorization token.
+Request Body (json):
+{
+"type": "point_to_plastic",
+"value": "0.5"
+}
+27. Update Configuration
+Method: PUT
+Path: /api/v1/admin/configurations/:type
+Description: Updates an existing configuration setting by its type.
+Headers: Requires Authorization token.
+Path Parameters:
+type: The type of configuration to update (e.g., 'point_to_naira').
+Request Body (json):
+{
+"value": "0.6"
+}
 
 # Newly added endpoints
 1. Get All Redemptions
