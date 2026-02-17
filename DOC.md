@@ -354,7 +354,7 @@ Request Body (json):
 27. Update Configuration
 Method: PUT
 Path: /api/v1/admin/configurations/:type
-Description: Updates an existing configuration setting by its type.
+Description: Updates an existing configuration setting by its type, or creates it if it does not exist.
 Headers: Requires Authorization token.
 Path Parameters:
 type: The type of configuration to update (e.g., 'point_to_naira').
