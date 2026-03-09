@@ -196,7 +196,7 @@ export const approveRedemption = catchController(
     await notificationService.createNotification(
       redemption.user,
       'Redemption Approved',
-      `Your request to convert ${redemption.points?.toFixed(
+      `Your request to convert ${Number(redemption.points || 0).toFixed(
         2,
       )} points was approved.`,
       NotificationType.TRANSACTION_SUCCESS,
@@ -204,6 +204,12 @@ export const approveRedemption = catchController(
 
     // Create transaction record for approval
     if (redemption.user) {
+      const platformChargesConfig = await configurationRepository.findOne({
+        where: { type: 'platform_charges' },
+      })
+      const chargePercentage = Number(platformChargesConfig?.value || 0)
+      const chargeAmount = (Number(redemption.points || 0) * chargePercentage) / 100
+
       const redemptionType = redemption.type === 'airtime' ? 'airtime' : 'cash'
       const transaction = new Transaction()
       transaction.type =
@@ -211,13 +217,13 @@ export const approveRedemption = catchController(
           ? TransactionType.AIRTIME
           : TransactionType.CASH
       transaction.direction = TransactionDirection.DEBIT
-      transaction.amount = redemption.points || 0
-      transaction.charges = 0
+      transaction.amount = (redemption.points || 0) - chargeAmount
+      transaction.charges = chargeAmount
       transaction.date = new Date()
       transaction.status = TransactionStatus.FULFILLED
-      transaction.description = `Your request to convert ${redemption.points?.toFixed(
-        2,
-      )} points to ${redemptionType} was approved and you've been credited.`
+      transaction.description = `Your request to convert ${Number(
+        redemption.points || 0,
+      ).toFixed(2)} points to ${redemptionType} was approved and you've been credited.`
       transaction.user = redemption.user
       transaction.wallet = redemption.user.wallet || undefined
       await transactionRepository.save(transaction)
@@ -269,7 +275,7 @@ export const declineRedemption = catchController(
     await notificationService.createNotification(
       redemption.user,
       'Redemption Declined',
-      `Your request to convert ${redemption.points?.toFixed(
+      `Your request to convert ${Number(redemption.points || 0).toFixed(
         2,
       )} points was declined and points have been refunded.`,
       NotificationType.TRANSACTION_FAILED,
@@ -297,9 +303,9 @@ export const declineRedemption = catchController(
         transaction.charges = 0
         transaction.date = new Date()
         transaction.status = TransactionStatus.CANCELLED
-        transaction.description = `Your request to convert ${redemption.points?.toFixed(
-          2,
-        )} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
+        transaction.description = `Your request to convert ${Number(
+          redemption.points || 0,
+        ).toFixed(2)} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
         transaction.user = user
         transaction.wallet = wallet
         await transactionRepository.save(transaction)
@@ -370,21 +376,132 @@ export const getDashboardData = catchController(
     const pointToNaira = await configurationRepository.findOne({
       where: { type: 'point_to_naira' },
     })
-    const [userCount, scheduleCount, totalWalletPoints] = await Promise.all([
+    
+    // Get last 6 months labels
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      return d.toLocaleString('default', { month: 'short' })
+    }).reverse()
+
+    const [
+      userCount, 
+      scheduleCount, 
+      totalWalletPoints, 
+      activeConversions,
+      registrationTrendsRaw,
+      pickupFrequencyRaw,
+      pointsTrendsRaw,
+      redemptionMethodsRaw,
+      wasteCompositionRaw
+    ] = await Promise.all([
       userRepository.count({ where: { role: UserRoleEnum.USER } }),
       scheduleRepository.count(),
       walletRepository
         .createQueryBuilder('wallet')
         .select('SUM(wallet.points)', 'totalWalletPoints')
         .getRawOne(),
+      redemptionRepository.count({ where: { status: RedemptionStatus.PENDING } }),
+      userRepository.query(`
+        SELECT 
+          TO_CHAR(date_trunc('day', "createdAt"), 'Mon DD') AS date,
+          COUNT(*) AS individual,
+          0 AS business
+        FROM users
+        WHERE role = 'user' AND "createdAt" >= CURRENT_DATE - INTERVAL '30 days'
+        GROUP BY date_trunc('day', "createdAt")
+        ORDER BY date_trunc('day', "createdAt")
+      `),
+      scheduleRepository.query(`
+        SELECT 
+          TO_CHAR(date_trunc('week', "date"), 'Mon DD') AS week,
+          COUNT(*) AS count
+        FROM schedule
+        WHERE category = 'pickup' AND "date" >= CURRENT_DATE - INTERVAL '8 weeks'
+        GROUP BY date_trunc('week', "date")
+        ORDER BY date_trunc('week', "date")
+      `),
+      transactionRepository.query(`
+        SELECT 
+          TO_CHAR(date_trunc('month', "date"), 'Mon') AS name,
+          COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END), 0) AS issuance,
+          COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount ELSE 0 END), 0) AS redemption
+        FROM transaction
+        WHERE "date" >= date_trunc('month', NOW()) - INTERVAL '5 months'
+        GROUP BY date_trunc('month', "date")
+        ORDER BY date_trunc('month', "date")
+      `),
+      transactionRepository.query(`
+        SELECT 
+          type AS method,
+          SUM(amount) AS amount
+        FROM transaction
+        WHERE direction = 'debit' AND type IN ('airtime', 'cash', 'giftcard')
+        GROUP BY type
+      `),
+      scheduleRepository.query(`
+        SELECT 
+          category AS name,
+          COUNT(*) AS value
+        FROM schedule
+        GROUP BY category
+      `)
     ])
-    const totalWalletAmount =
-      (totalWalletPoints.totalWalletPoints || 0) *
-      parseFloat(pointToNaira?.value || '0')
+
+    const pToN = parseFloat(pointToNaira?.value || '0')
+    const totalWalletAmount = (totalWalletPoints.totalWalletPoints || 0) * pToN
+
+    // Format new datasets
+    const registrationTrends = registrationTrendsRaw.map((t: any) => ({
+      date: t.date,
+      individual: parseInt(t.individual, 10),
+      business: parseInt(t.business, 10)
+    }))
+
+    const pickupFrequency = pickupFrequencyRaw.map((t: any) => ({
+      week: t.week,
+      count: parseInt(t.count, 10)
+    }))
+
+    // Ensure last 6 months have entries in pointsTrends
+    const pointsTrends = last6Months.map(month => {
+      const pt = pointsTrendsRaw.find((t: any) => t.name === month)
+      const nairaIssuance = parseFloat(pt?.issuance || '0')
+      const nairaRedemption = parseFloat(pt?.redemption || '0')
+      // convert to points roughly using pointToNaira, or just show as Naira value. The chart says "Points Issuance vs Redemption", so we convert to points by dividing by pToN. Points = amount / pToN? No, amount = points / conversionRate? In earlier code: nairaAmount = points / conversionRate. So points = nairaAmount * conversionRate. But wait, pointToNaira is e.g. 1 point = 0.5 naira? No, conversionRate = Number(config.value). nairaAmount = points / conversionRate. So Points = NairaAmount * conversionRate
+      return {
+        name: month,
+        issuance: pToN ? nairaIssuance * pToN : 0,
+        redemption: pToN ? nairaRedemption * pToN : 0
+      }
+    })
+
+    const allMethods = ['airtime', 'cash', 'giftcard']
+    const redemptionMethods = allMethods.map(method => {
+      const rm = redemptionMethodsRaw.find((t: any) => t.method === method)
+      return {
+        method: method.charAt(0).toUpperCase() + method.slice(1),
+        amount: parseFloat(rm?.amount || '0')
+      }
+    })
+
+    const wasteComposition = wasteCompositionRaw.map((t: any) => ({
+      name: t.name ? t.name.charAt(0).toUpperCase() + t.name.slice(1) : 'Unknown',
+      value: parseInt(t.value, 10)
+    }))
+
     const dashboardData = {
       userCount,
       scheduleCount,
       totalWalletAmount: totalWalletAmount || 0,
+      activeConversions,
+      pointToNaira: Number(pointToNaira?.value || 0),
+      chartData: [], // keep empty or remove if not needed, we'll just send empty to not break interface yet
+      registrationTrends,
+      pickupFrequency,
+      pointsTrends,
+      redemptionMethods,
+      wasteComposition
     }
 
     res
