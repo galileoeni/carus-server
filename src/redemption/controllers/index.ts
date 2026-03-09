@@ -236,9 +236,9 @@ export const oldRedeemForAirtime = catchController(
     transaction.charges = 0
     transaction.date = new Date()
     transaction.status = TransactionStatus.PENDING
-    transaction.description = `You requested to convert ${points.toFixed(
-      2,
-    )} points to airtime.`
+    transaction.description = `You requested to convert ${Number(
+      points || 0,
+    ).toFixed(2)} points to airtime.`
     transaction.user = user
     transaction.wallet = wallet
     await transactionRepository.save(transaction)
@@ -398,9 +398,9 @@ export const oldRedeemForCash = catchController(
     transaction.charges = 0
     transaction.date = new Date()
     transaction.status = TransactionStatus.PENDING
-    transaction.description = `You requested to convert ${points.toFixed(
-      2,
-    )} points to cash.`
+    transaction.description = `You requested to convert ${Number(
+      points || 0,
+    ).toFixed(2)} points to cash.`
     transaction.user = user
     transaction.wallet = wallet
     await transactionRepository.save(transaction)

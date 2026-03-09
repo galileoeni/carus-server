@@ -32,8 +32,15 @@ export class Donation {
   @Column({ nullable: false })
   duration?: Date
 
-  @Column({ nullable: true, type: 'varchar' })
+  @Column({ nullable: true, type: "varchar" })
   image?: string | null
+
+  @Column({
+    type: "enum",
+    enum: ["pending", "active", "completed"],
+    default: "active",
+  })
+  status?: string
 
   @CreateDateColumn()
   createdAt?: Date

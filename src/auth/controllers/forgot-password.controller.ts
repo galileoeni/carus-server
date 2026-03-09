@@ -125,7 +125,7 @@ export const forgotPassword = catchController(
           StatusCodes.OK,
           {},
           [],
-          'An otp has been sent to your mail',
+          'A password reset link has been sent to your mail',
         ),
       )
   },
