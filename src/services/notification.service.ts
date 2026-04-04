@@ -11,6 +11,7 @@ class NotificationService {
     title: string,
     message: string,
     type: NotificationType,
+    manager?: any,
   ): Promise<Notification> {
     const notification = new Notification()
     notification.title = title
@@ -20,9 +21,10 @@ class NotificationService {
       notification.user = user
     }
 
-    const savedNotification = await this.notificationRepository.save(
-      notification,
-    )
+    const savedNotification = await (manager
+      ? manager.getRepository(Notification)
+      : this.notificationRepository
+    ).save(notification)
 
     if (user && user.id) {
       socketService.emitToUser(user.id, 'notification', savedNotification)

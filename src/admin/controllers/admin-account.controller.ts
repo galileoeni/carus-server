@@ -26,16 +26,7 @@ export const createAdmin = catchController(
     } = req.body as UserRow
 
     // Check if all fields are passed
-    const requiredFields = [
-      'password',
-      'email',
-      'first_name',
-      'last_name',
-      'phone',
-      'gender',
-      'dob',
-      'country_code',
-    ]
+    const requiredFields = ['password', 'email', 'first_name', 'last_name']
     if (requiredFields.some((field) => !req.body[field])) {
       return res
         .status(StatusCodes.BAD_REQUEST)
@@ -96,7 +87,8 @@ export const createAdmin = catchController(
     //         )
     // }
 
-    if (phone.length < 5) {
+    //make sure phone number is valid
+    if (phone && phone.length < 5) {
       return res
         .status(StatusCodes.BAD_REQUEST)
         .json(
@@ -110,18 +102,20 @@ export const createAdmin = catchController(
     }
 
     //check if phone number is linked to another account
-    const existingPhone = await userRepository.findOneBy({ phone })
-    if (existingPhone) {
-      return res
-        .status(StatusCodes.CONFLICT)
-        .json(
-          generalResponse(
-            StatusCodes.CONFLICT,
-            {},
-            [],
-            'This phone number is already linked to another account',
-          ),
-        )
+    if (phone) {
+      const existingPhone = await userRepository.findOneBy({ phone })
+      if (existingPhone) {
+        return res
+          .status(StatusCodes.CONFLICT)
+          .json(
+            generalResponse(
+              StatusCodes.CONFLICT,
+              {},
+              [],
+              'This phone number is already linked to another account',
+            ),
+          )
+      }
     }
 
     if (!password) {
@@ -153,8 +147,7 @@ export const createAdmin = catchController(
     const hashedPassword = await bcrypt.hash(password, 10)
 
     const dateString = req.body.dob
-
-    const dob = new Date(dateString)
+    const dob = dateString ? new Date(dateString) : null
 
     // if the request meets all the requirements then...
     // generate a random whole number between 1 and 4 icluding 1 and 4
@@ -170,10 +163,10 @@ export const createAdmin = catchController(
       password: hashedPassword,
       first_name: first_name,
       last_name: last_name,
-      phone: phone,
-      gender: gender,
+      phone: phone || null,
+      gender: gender || null,
       dob: dob,
-      country_code: country_code,
+      country_code: country_code || '+234',
       status: 'ACTIVE',
     })
 

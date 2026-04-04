@@ -402,14 +402,17 @@ export const editProfile = catchController(
 
     user.updatedAt = new Date(Date.now())
 
-    await userRepository.save(user)
+    await AppDataSource.transaction(async (transactionalEntityManager) => {
+      await transactionalEntityManager.save(user)
 
-    await notificationService.createNotification(
-      user,
-      'Profile Updated',
-      'Your profile has been updated successfully.',
-      NotificationType.PROFILE_UPDATE,
-    )
+      await notificationService.createNotification(
+        user,
+        'Profile Updated',
+        'Your profile has been updated successfully.',
+        NotificationType.PROFILE_UPDATE,
+        transactionalEntityManager,
+      )
+    })
 
     return res.status(StatusCodes.OK).json(
       generalResponse(
@@ -569,14 +572,17 @@ export const changePassword = catchController(
     }
 
     user.password = await bcrypt.hash(newPassword, 10)
-    await AppDataSource.getRepository(User).save(user)
+    await AppDataSource.transaction(async (transactionalEntityManager) => {
+      await transactionalEntityManager.save(User, user)
 
-    await notificationService.createNotification(
-      user,
-      'Password Changed',
-      'Your password has been changed successfully. If you did not do this, please contact support.',
-      NotificationType.PASSWORD_CHANGE,
-    )
+      await notificationService.createNotification(
+        user,
+        'Password Changed',
+        'Your password has been changed successfully. If you did not do this, please contact support.',
+        NotificationType.PASSWORD_CHANGE,
+        transactionalEntityManager,
+      )
+    })
 
     res
       .status(StatusCodes.OK)
