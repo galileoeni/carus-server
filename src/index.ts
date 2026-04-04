@@ -14,6 +14,7 @@ import cors from 'cors'
 import express from 'express'
 import session from 'express-session'
 import passport from 'passport'
+import { rateLimit } from 'express-rate-limit'
 import path from 'path'
 import http from 'http'
 import createMemoryStore from 'memorystore'
@@ -39,8 +40,30 @@ const startServer = async () => {
       throw err
     })
 
-  //TODO: Configure cors and encrypt password in transit
-  app.use(cors())
+  // Trust proxy for rate limiting behind reverse proxies (Nginx, Vercel, etc)
+  app.set('trust proxy', 1)
+
+  // CORS Configuration
+  app.use(
+    cors({
+      origin: env.ALLOWED_ORIGINS
+        ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+        : '*',
+      credentials: true,
+    }),
+  )
+
+  // Rate Limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+    standardHeaders: 'draft-7', // set `RateLimit` and `RateLimit-Policy` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+  })
+
+  // Apply the rate limiting middleware to all requests.
+  app.use(limiter)
   app.use(
     session({
       store: new MemoryStore({

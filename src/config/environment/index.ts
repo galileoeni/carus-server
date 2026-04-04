@@ -11,6 +11,7 @@ const env = {
     JWT_SECRET: process.env.JWT_SECRET,
   },
   ALLOWED_ORIGINS:
+    process.env.ALLOWED_ORIGINS ||
     'https://carus.com.ng, https://carus-frontend.vercel.app, http://localhost:3000',
   // getDevBaseUrl() {
   //     const self = env
