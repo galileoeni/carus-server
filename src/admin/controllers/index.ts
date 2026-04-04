@@ -159,74 +159,87 @@ export const loginAdmin = catchController(
 export const approveRedemption = catchController(
   async (req: Request, res: Response) => {
     const id = req.params.id as string
-    const redemption = await redemptionRepository.findOne({
-      where: { id },
-      relations: ['user', 'user.wallet'],
-    })
 
-    if (!redemption) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            'Redemption not found',
-          ),
+    const result = await AppDataSource.transaction(
+      async (transactionalEntityManager) => {
+        const redemption = await transactionalEntityManager.findOne(
+          Redemption,
+          {
+            where: { id },
+            relations: ['user', 'user.wallet'],
+          },
         )
-    }
 
-    if (redemption.status !== RedemptionStatus.PENDING) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json(
-          generalResponse(
-            StatusCodes.BAD_REQUEST,
-            {},
-            [],
-            'Redemption has already been processed',
-          ),
-        )
-    }
+        if (!redemption) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: 'Redemption not found',
+          }
+        }
 
-    redemption.status = RedemptionStatus.FULFILLED
-    await redemptionRepository.save(redemption)
+        if (redemption.status !== RedemptionStatus.PENDING) {
+          return {
+            error: true,
+            status: StatusCodes.BAD_REQUEST,
+            message: 'Redemption has already been processed',
+          }
+        }
 
-    await notificationService.createNotification(
-      redemption.user,
-      'Redemption Approved',
-      `Your request to convert ${Number(redemption.points || 0).toFixed(
-        2,
-      )} points was approved.`,
-      NotificationType.TRANSACTION_SUCCESS,
+        redemption.status = RedemptionStatus.FULFILLED
+        await transactionalEntityManager.save(redemption)
+
+        if (redemption.user) {
+          const platformChargesConfig =
+            await transactionalEntityManager.findOne(Configurations, {
+              where: { type: 'platform_charges' },
+            })
+          const chargePercentage = Number(platformChargesConfig?.value || 0)
+          const chargeAmount =
+            (Number(redemption.points || 0) * chargePercentage) / 100
+
+          const redemptionType =
+            redemption.type === 'airtime' ? 'airtime' : 'cash'
+          const transaction = new Transaction()
+          transaction.type =
+            redemption.type === 'airtime'
+              ? TransactionType.AIRTIME
+              : TransactionType.CASH
+          transaction.direction = TransactionDirection.DEBIT
+          transaction.amount = (redemption.points || 0) - chargeAmount
+          transaction.charges = chargeAmount
+          transaction.date = new Date()
+          transaction.status = TransactionStatus.FULFILLED
+          transaction.description = `Your request to convert ${Number(
+            redemption.points || 0,
+          ).toFixed(
+            2,
+          )} points to ${redemptionType} was approved and you've been credited.`
+          transaction.user = redemption.user
+          transaction.wallet = redemption.user.wallet || undefined
+          await transactionalEntityManager.save(transaction)
+
+          await notificationService.createNotification(
+            redemption.user,
+            'Redemption Approved',
+            `Your request to convert ${Number(redemption.points || 0).toFixed(
+              2,
+            )} points was approved.`,
+            NotificationType.TRANSACTION_SUCCESS,
+            transactionalEntityManager,
+          )
+        }
+        return { error: false }
+      },
     )
 
-    // Create transaction record for approval
-    if (redemption.user) {
-      const platformChargesConfig = await configurationRepository.findOne({
-        where: { type: 'platform_charges' },
-      })
-      const chargePercentage = Number(platformChargesConfig?.value || 0)
-      const chargeAmount = (Number(redemption.points || 0) * chargePercentage) / 100
-
-      const redemptionType = redemption.type === 'airtime' ? 'airtime' : 'cash'
-      const transaction = new Transaction()
-      transaction.type =
-        redemption.type === 'airtime'
-          ? TransactionType.AIRTIME
-          : TransactionType.CASH
-      transaction.direction = TransactionDirection.DEBIT
-      transaction.amount = (redemption.points || 0) - chargeAmount
-      transaction.charges = chargeAmount
-      transaction.date = new Date()
-      transaction.status = TransactionStatus.FULFILLED
-      transaction.description = `Your request to convert ${Number(
-        redemption.points || 0,
-      ).toFixed(2)} points to ${redemptionType} was approved and you've been credited.`
-      transaction.user = redemption.user
-      transaction.wallet = redemption.user.wallet || undefined
-      await transactionRepository.save(transaction)
+    if (result.error) {
+      const statusCode = result.status ?? StatusCodes.INTERNAL_SERVER_ERROR
+      return res
+        .status(statusCode)
+        .json(
+          generalResponse(statusCode, {}, [], result.message ?? 'An error occurred'),
+        )
     }
 
     res
@@ -238,78 +251,89 @@ export const approveRedemption = catchController(
 export const declineRedemption = catchController(
   async (req: Request, res: Response) => {
     const id = req.params.id as string
-    const redemption = await redemptionRepository.findOne({
-      where: { id },
-      relations: ['user', 'user.wallet'],
-    })
 
-    if (!redemption) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            'Redemption not found',
-          ),
+    const result = await AppDataSource.transaction(
+      async (transactionalEntityManager) => {
+        const redemption = await transactionalEntityManager.findOne(
+          Redemption,
+          {
+            where: { id },
+            relations: ['user', 'user.wallet'],
+          },
         )
-    }
 
-    if (redemption.status !== RedemptionStatus.PENDING) {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json(
-          generalResponse(
-            StatusCodes.BAD_REQUEST,
-            {},
-            [],
-            'Redemption has already been processed',
-          ),
-        )
-    }
+        if (!redemption) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: 'Redemption not found',
+          }
+        }
 
-    redemption.status = RedemptionStatus.CANCELLED
-    await redemptionRepository.save(redemption)
+        if (redemption.status !== RedemptionStatus.PENDING) {
+          return {
+            error: true,
+            status: StatusCodes.BAD_REQUEST,
+            message: 'Redemption has already been processed',
+          }
+        }
 
-    await notificationService.createNotification(
-      redemption.user,
-      'Redemption Declined',
-      `Your request to convert ${Number(redemption.points || 0).toFixed(
-        2,
-      )} points was declined and points have been refunded.`,
-      NotificationType.TRANSACTION_FAILED,
+        redemption.status = RedemptionStatus.CANCELLED
+        await transactionalEntityManager.save(redemption)
+
+        if (redemption.user) {
+          const user = redemption.user as User
+          const wallet = await transactionalEntityManager.findOne(Wallet, {
+            where: { user: { id: user.id } },
+          })
+          if (wallet) {
+            wallet.points = (wallet.points ?? 0) + (redemption.points ?? 0)
+            await transactionalEntityManager.save(wallet)
+
+            // Create transaction record for decline
+            const redemptionType =
+              redemption.type === 'airtime' ? 'airtime' : 'cash'
+            const transaction = new Transaction()
+            transaction.type =
+              redemption.type === 'airtime'
+                ? TransactionType.AIRTIME
+                : TransactionType.CASH
+            transaction.direction = TransactionDirection.DEBIT
+            transaction.amount = redemption.points || 0
+            transaction.charges = 0
+            transaction.date = new Date()
+            transaction.status = TransactionStatus.CANCELLED
+            transaction.description = `Your request to convert ${Number(
+              redemption.points || 0,
+            ).toFixed(
+              2,
+            )} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
+            transaction.user = user
+            transaction.wallet = wallet
+            await transactionalEntityManager.save(transaction)
+          }
+
+          await notificationService.createNotification(
+            redemption.user,
+            'Redemption Declined',
+            `Your request to convert ${Number(redemption.points || 0).toFixed(
+              2,
+            )} points was declined and points have been refunded.`,
+            NotificationType.TRANSACTION_FAILED,
+            transactionalEntityManager,
+          )
+        }
+        return { error: false }
+      },
     )
 
-    if (redemption.user) {
-      const user = redemption.user as User
-      const wallet = await walletRepository.findOne({
-        where: { user: { id: user.id } },
-      })
-      if (wallet) {
-        wallet.points = (wallet.points ?? 0) + (redemption.points ?? 0)
-        await walletRepository.save(wallet)
-
-        // Create transaction record for decline
-        const redemptionType =
-          redemption.type === 'airtime' ? 'airtime' : 'cash'
-        const transaction = new Transaction()
-        transaction.type =
-          redemption.type === 'airtime'
-            ? TransactionType.AIRTIME
-            : TransactionType.CASH
-        transaction.direction = TransactionDirection.DEBIT
-        transaction.amount = redemption.points || 0
-        transaction.charges = 0
-        transaction.date = new Date()
-        transaction.status = TransactionStatus.CANCELLED
-        transaction.description = `Your request to convert ${Number(
-          redemption.points || 0,
-        ).toFixed(2)} points to ${redemptionType} was declined. Points have been refunded to your wallet.`
-        transaction.user = user
-        transaction.wallet = wallet
-        await transactionRepository.save(transaction)
-      }
+    if (result.error) {
+      const statusCode = result.status ?? StatusCodes.INTERNAL_SERVER_ERROR
+      return res
+        .status(statusCode)
+        .json(
+          generalResponse(statusCode, {}, [], result.message ?? 'An error occurred'),
+        )
     }
 
     res
@@ -385,15 +409,15 @@ export const getDashboardData = catchController(
     }).reverse()
 
     const [
-      userCount, 
-      scheduleCount, 
-      totalWalletPoints, 
-      activeConversions,
+      userCount,
+      scheduleCount,
+      totalWalletPoints,
+      totalConversions,
       registrationTrendsRaw,
       pickupFrequencyRaw,
       pointsTrendsRaw,
       redemptionMethodsRaw,
-      wasteCompositionRaw
+      wasteCompositionRaw,
     ] = await Promise.all([
       userRepository.count({ where: { role: UserRoleEnum.USER } }),
       scheduleRepository.count(),
@@ -401,7 +425,9 @@ export const getDashboardData = catchController(
         .createQueryBuilder('wallet')
         .select('SUM(wallet.points)', 'totalWalletPoints')
         .getRawOne(),
-      redemptionRepository.count({ where: { status: RedemptionStatus.PENDING } }),
+      redemptionRepository.count({
+        where: { status: RedemptionStatus.FULFILLED },
+      }),
       userRepository.query(`
         SELECT 
           TO_CHAR(date_trunc('day', "createdAt"), 'Mon DD') AS date,
@@ -445,7 +471,7 @@ export const getDashboardData = catchController(
           COUNT(*) AS value
         FROM schedule
         GROUP BY category
-      `)
+      `),
     ])
 
     const pToN = parseFloat(pointToNaira?.value || '0')
@@ -455,16 +481,16 @@ export const getDashboardData = catchController(
     const registrationTrends = registrationTrendsRaw.map((t: any) => ({
       date: t.date,
       individual: parseInt(t.individual, 10),
-      business: parseInt(t.business, 10)
+      business: parseInt(t.business, 10),
     }))
 
     const pickupFrequency = pickupFrequencyRaw.map((t: any) => ({
       week: t.week,
-      count: parseInt(t.count, 10)
+      count: parseInt(t.count, 10),
     }))
 
     // Ensure last 6 months have entries in pointsTrends
-    const pointsTrends = last6Months.map(month => {
+    const pointsTrends = last6Months.map((month) => {
       const pt = pointsTrendsRaw.find((t: any) => t.name === month)
       const nairaIssuance = parseFloat(pt?.issuance || '0')
       const nairaRedemption = parseFloat(pt?.redemption || '0')
@@ -472,36 +498,38 @@ export const getDashboardData = catchController(
       return {
         name: month,
         issuance: pToN ? nairaIssuance * pToN : 0,
-        redemption: pToN ? nairaRedemption * pToN : 0
+        redemption: pToN ? nairaRedemption * pToN : 0,
       }
     })
 
     const allMethods = ['airtime', 'cash', 'giftcard']
-    const redemptionMethods = allMethods.map(method => {
+    const redemptionMethods = allMethods.map((method) => {
       const rm = redemptionMethodsRaw.find((t: any) => t.method === method)
       return {
         method: method.charAt(0).toUpperCase() + method.slice(1),
-        amount: parseFloat(rm?.amount || '0')
+        amount: parseFloat(rm?.amount || '0'),
       }
     })
 
     const wasteComposition = wasteCompositionRaw.map((t: any) => ({
-      name: t.name ? t.name.charAt(0).toUpperCase() + t.name.slice(1) : 'Unknown',
-      value: parseInt(t.value, 10)
+      name: t.name
+        ? t.name.charAt(0).toUpperCase() + t.name.slice(1)
+        : 'Unknown',
+      value: parseInt(t.value, 10),
     }))
 
     const dashboardData = {
       userCount,
       scheduleCount,
       totalWalletAmount: totalWalletAmount || 0,
-      activeConversions,
+      totalConversions,
       pointToNaira: Number(pointToNaira?.value || 0),
       chartData: [], // keep empty or remove if not needed, we'll just send empty to not break interface yet
       registrationTrends,
       pickupFrequency,
       pointsTrends,
       redemptionMethods,
-      wasteComposition
+      wasteComposition,
     }
 
     res
@@ -699,178 +727,171 @@ export const fulfillSchedule = catchController(
         )
     }
 
-    const point_to_plastic = await configurationRepository.findOne({
-      where: { type: 'point_to_plastic' },
-    })
-
-    if (!point_to_plastic?.value) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            'configuration not found',
-          ),
+    const result = await AppDataSource.transaction(
+      async (transactionalEntityManager) => {
+        const point_to_plastic = await transactionalEntityManager.findOne(
+          Configurations,
+          {
+            where: { type: 'point_to_plastic' },
+          },
         )
-    }
 
-    const parsedPointToPlastic = Number(point_to_plastic?.value)
+        if (!point_to_plastic?.value) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: 'configuration not found',
+          }
+        }
 
-    const point_to_naira = await configurationRepository.findOne({
-      where: { type: 'point_to_naira' },
-    })
+        const parsedPointToPlastic = Number(point_to_plastic.value)
 
-    if (!point_to_naira?.value) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            'configuration not found',
-          ),
+        const point_to_naira = await transactionalEntityManager.findOne(
+          Configurations,
+          {
+            where: { type: 'point_to_naira' },
+          },
         )
-    }
 
-    const parsedPointToNaira = Number(point_to_naira.value)
+        if (!point_to_naira?.value) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: 'configuration not found',
+          }
+        }
 
-    //find schedule with the scheduleId
-    const existingSchedule = await scheduleRepository.findOne({
-      where: { id: id },
-    })
+        const parsedPointToNaira = Number(point_to_naira.value)
 
-    if (!existingSchedule) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(StatusCodes.NOT_FOUND, {}, [], 'invalid schedule id'),
+        //find schedule with the scheduleId
+        const existingSchedule = await transactionalEntityManager.findOne(
+          Schedule,
+          {
+            where: { id: id },
+          },
         )
-    }
 
-    //find user with the schedule
-    const user = await userRepository.findOne({
-      relations: {
-        orders: true,
+        if (!existingSchedule) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: 'invalid schedule id',
+          }
+        }
+
+        //find user with the schedule
+        const user = await transactionalEntityManager.findOne(User, {
+          relations: {
+            orders: true,
+          },
+          where: {
+            orders: {
+              id: existingSchedule.id,
+            },
+          },
+        })
+
+        if (!user) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: userNotFound,
+          }
+        }
+
+        //ensure that the schedule has been accepted first
+        if (existingSchedule.status !== 'accepted') {
+          return {
+            error: true,
+            status: StatusCodes.BAD_REQUEST,
+            message: 'schedule has not been accepted, it cannot be fulfilled',
+          }
+        }
+
+        // find the user's corresponding wallet
+        const wallet = await transactionalEntityManager.findOne(Wallet, {
+          where: {
+            user: {
+              id: user.id,
+            },
+          },
+          lock: { mode: 'pessimistic_write' },
+        })
+
+        if (!wallet) {
+          return {
+            error: true,
+            status: StatusCodes.NOT_FOUND,
+            message: 'wallet not found',
+          }
+        }
+
+        const calculatedPoints = Number(
+          Number(parsedMaterialAmount) * Number(parsedPointToPlastic),
+        )
+
+        wallet.points = Number(wallet.points || 0) + calculatedPoints
+
+        const calculatedNairaAmount =
+          Number(calculatedPoints) / Number(parsedPointToNaira)
+
+        await transactionalEntityManager.save(wallet)
+
+        const transaction = new Transaction()
+        transaction.user = user
+        transaction.date = new Date(Date.now())
+        transaction.type =
+          existingSchedule.category === 'pickup'
+            ? TransactionType.PICKUP
+            : TransactionType.DROPOFF
+        transaction.direction = TransactionDirection.CREDIT
+        transaction.wallet = wallet
+        transaction.schedule = existingSchedule
+        transaction.amount = calculatedNairaAmount
+        transaction.charges = 0
+        transaction.status = TransactionStatus.COMPLETED
+
+        await transactionalEntityManager.save(transaction)
+
+        existingSchedule.status = 'completed'
+        existingSchedule.amount = calculatedNairaAmount
+
+        await transactionalEntityManager.save(existingSchedule)
+
+        await notificationService.createNotification(
+          user,
+          'Points Earned!',
+          `You have earned ${calculatedPoints} points from your ${existingSchedule.category}.`,
+          NotificationType.POINTS_EARNED,
+          transactionalEntityManager,
+        )
+
+        return { error: false, amount: calculatedNairaAmount }
       },
-      where: {
-        orders: {
-          id: existingSchedule.id,
-        },
-      },
-    })
-
-    if (!user) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], userNotFound))
-    }
-
-    //ensure that the schedule has been accepted first
-    if (existingSchedule.status !== 'accepted') {
-      return res
-        .status(StatusCodes.BAD_REQUEST)
-        .json(
-          generalResponse(
-            StatusCodes.BAD_REQUEST,
-            {},
-            [],
-            'schedule has not been accepted, it cannot be fulfilled',
-          ),
-        )
-    }
-
-    // find the user's corresponding wallet
-    const wallet = await walletRepository.findOne({
-      relations: {
-        user: true,
-      },
-      where: {
-        user: {
-          id: user.id,
-        },
-      },
-    })
-
-    if (!wallet?.points) {
-      return res
-        .status(StatusCodes.NOT_FOUND)
-        .json(
-          generalResponse(StatusCodes.NOT_FOUND, {}, [], 'wallet not found'),
-        )
-    }
-
-    const calculatedPoints = Number(
-      Number(parsedMaterialAmount) * Number(parsedPointToPlastic),
     )
 
-    wallet.points = Number(wallet.points) + calculatedPoints
+    if (result.error) {
+      const statusCode = result.status ?? StatusCodes.INTERNAL_SERVER_ERROR
+      return res
+        .status(statusCode)
+        .json(
+          generalResponse(
+            statusCode,
+            '',
+            [],
+            result.message ?? 'An error occurred',
+          ),
+        )
+    }
 
-    const calculatedNairaAmount =
-      Number(calculatedPoints) / Number(parsedPointToNaira)
-
-    await walletRepository.save(wallet)
-
-    // const transaction = await transactionRepository.findOne({
-    //     relations: {
-    //         schedule: true
-    //     },
-    //     where: {
-    //         schedule: {
-    //             id: existingSchedule.id
-    //         }
-    //     }
-    // })
-
-    // if (!transaction) {
-    //     return res.status(StatusCodes.NOT_FOUND).json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'transaction not found'));
-    // }
-
-    // transaction.amount = calculatedNairaAmount
-    // transaction.charges = 0
-    // transaction.status = 'fulfilled'
-    // await transactionRepository.save(transaction)
-
-    const transaction = new Transaction()
-    transaction.user = user
-    transaction.date = new Date(Date.now())
-    transaction.type =
-      existingSchedule.category === 'pickup'
-        ? TransactionType.PICKUP
-        : TransactionType.DROPOFF
-    transaction.direction = TransactionDirection.CREDIT
-    transaction.wallet = wallet
-    transaction.schedule = existingSchedule
-    transaction.amount = calculatedNairaAmount
-    transaction.charges = 0
-    transaction.status = TransactionStatus.COMPLETED
-
-    await transactionRepository.save(transaction)
-
-    existingSchedule.status = 'completed'
-    existingSchedule.amount = calculatedNairaAmount
-
-    await scheduleRepository.save(existingSchedule)
-
-    await notificationService.createNotification(
-      user,
-      'Points Earned!',
-      `You have earned ${calculatedPoints} points from your ${existingSchedule.category}.`,
-      NotificationType.POINTS_EARNED,
+    return res.status(StatusCodes.OK).json(
+      generalResponse(
+        StatusCodes.OK,
+        {},
+        [],
+        `Schedule has been completed, user's wallet will be credited with ₦${result.amount?.toLocaleString()}`,
+      ),
     )
-
-    return res
-      .status(StatusCodes.OK)
-      .json(
-        generalResponse(
-          StatusCodes.OK,
-          {},
-          [],
-          `Schedule has been completed, user's wallet will be credited with ₦${calculatedNairaAmount.toLocaleString()}`,
-        ),
-      )
   },
 )
 
