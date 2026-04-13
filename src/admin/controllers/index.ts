@@ -26,6 +26,7 @@ import catchController from '../../utils/catchControllerAsyncs'
 import { AppDataSource } from '../../data-source'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
+import { In } from 'typeorm'
 
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
@@ -991,7 +992,7 @@ export const getAllAccounts = catchController(
         wallet: true,
       },
       where: {
-        role: UserRoleEnum.USER,
+        role: In([UserRoleEnum.USER, UserRoleEnum.ADMIN]),
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -1019,6 +1020,7 @@ export const getAllAccounts = catchController(
           gender: user.gender,
           phone: user.phone,
           status: user.status,
+          role: user.role,
           created_at: user.createdAt,
           updated_at: user.updatedAt,
           wallet: user.wallet,

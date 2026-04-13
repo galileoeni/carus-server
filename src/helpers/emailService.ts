@@ -1,14 +1,23 @@
-import sgMail from '@sendgrid/mail'
 import path from 'path'
 import pug from 'pug'
+import { Resend } from 'resend'
 
-sgMail.setApiKey(String(process.env.SENDGRID_API_KEY))
-
+const resend = new Resend(process.env.RESEND_API_KEY)
 const emailPath = path.join(__dirname, '../../views/')
 
 // Helper to render Pug templates
 const renderTemplate = (templateName: string, data: any) => {
   return pug.renderFile(path.join(emailPath, templateName), data)
+}
+
+const getRequiredEnv = (key: 'FROM_MAIL' | 'CONTACT_EMAIL_RECEPIENT') => {
+  const value = process.env[key]
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`)
+  }
+
+  return value
 }
 
 // Send a verification OTP email
@@ -25,13 +34,13 @@ export const sendVerificationOtp = async (
     })
 
     const msg = {
-      from: `CARUS RECYCLING <${process.env.FROM_MAIL}>`,
+      from: `CARUS RECYCLING <${getRequiredEnv('FROM_MAIL')}>`,
       to: email,
       subject: 'Verify your email',
       html,
     }
 
-    const info = await sgMail.send(msg)
+    const info = await resend.emails.send(msg)
     return info
   } catch (error) {
     console.error('Email Service Error:', error)
@@ -47,14 +56,18 @@ export const sendContactMessage = async (
   message: string,
 ) => {
   try {
+    const fromEmail = getRequiredEnv('FROM_MAIL')
+    console.log('From Email:', fromEmail)
+    const contactRecipient = getRequiredEnv('CONTACT_EMAIL_RECEPIENT')
+
     const msg = {
-      from: `CARUS RECYCLING <${process.env.FROM_MAIL}>`,
-      to: process.env.CONTACT_EMAIL_RECEPIENT,
+      from: `CARUS RECYCLING <${fromEmail}>`,
+      to: contactRecipient,
       subject: `${first_name} ${last_name}: <${user_email}>`,
       text: message,
     }
 
-    const info = await sgMail.send(msg)
+    const info = await resend.emails.send(msg)
     return info
   } catch (error) {
     console.error('Email Service Error:', error)
@@ -76,13 +89,13 @@ export const sendPasswordResetToken = async (
     })
 
     const msg = {
-      from: `CARUS RECYCLING <${process.env.FROM_MAIL}>`,
+      from: `CARUS RECYCLING <${getRequiredEnv('FROM_MAIL')}>`,
       to: email,
       subject: 'Password reset',
       html,
     }
 
-    const info = await sgMail.send(msg)
+    const info = await resend.emails.send(msg)
     return info
   } catch (error) {
     console.error('Email Service Error:', error)
