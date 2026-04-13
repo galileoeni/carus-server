@@ -46,9 +46,12 @@ const startServer = async () => {
   // CORS Configuration
   app.use(
     cors({
-      origin: env.ALLOWED_ORIGINS
-        ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-        : '*',
+      origin:
+        env.ENVIRONMENT === 'development'
+          ? 'http://localhost:3000'
+          : env.ALLOWED_ORIGINS
+          ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+          : '*',
       credentials: true,
     }),
   )
@@ -59,7 +62,8 @@ const startServer = async () => {
     limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
     standardHeaders: 'draft-7', // set `RateLimit` and `RateLimit-Policy` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
-    message: 'Too many requests from this IP, please try again after 15 minutes',
+    message:
+      'Too many requests from this IP, please try again after 15 minutes',
   })
 
   // Apply the rate limiting middleware to all requests.
