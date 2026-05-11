@@ -213,6 +213,26 @@ export const getCampaign = catchController(
         .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
     }
 
+    // Get contributions for this campaign
+    const contributions = await donationRepository
+      .createQueryBuilder('donation')
+      .leftJoinAndSelect('donation.contributions', 'contribution')
+      .leftJoinAndSelect('contribution.user', 'user')
+      .where('donation.id = :id', { id })
+      .getOne()
+
+    const formattedContributions = contributions?.contributions?.map(contribution => ({
+      id: contribution.id,
+      amount: contribution.amount,
+      createdAt: contribution.createdAt,
+      user: contribution.user ? {
+        id: contribution.user.id,
+        first_name: contribution.user.first_name,
+        last_name: contribution.user.last_name,
+        email: contribution.user.email,
+      } : null
+    })) || []
+
     const formattedCampaign = {
       id: campaign.donation_id,
       title: campaign.donation_title,
@@ -224,6 +244,7 @@ export const getCampaign = catchController(
       updatedAt: campaign.donation_updated_at,
       amountRaised: Number(campaign.amountRaised),
       numberOfDonors: Number(campaign.numberOfDonors),
+      contributions: formattedContributions,
     }
 
     res

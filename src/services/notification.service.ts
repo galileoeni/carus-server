@@ -46,6 +46,63 @@ class NotificationService {
     await this.createNotification(undefined, title, message, NotificationType.ANNOUNCEMENT)
   }
 
+  public async sendNotificationToUser(
+    userId: string,
+    title: string,
+    message: string,
+    type: NotificationType = NotificationType.ANNOUNCEMENT,
+  ): Promise<Notification> {
+    const user = await AppDataSource.getRepository(User).findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return await this.createNotification(user, title, message, type);
+  }
+
+  public async sendPickupNotification(
+    userId: string,
+    scheduleDetails: {
+      material: string;
+      amount: number;
+      date: string;
+      status: string;
+    },
+  ): Promise<Notification> {
+    const title = 'Pickup Update';
+    const message = `Your ${scheduleDetails.material} pickup for ${scheduleDetails.amount}kg scheduled on ${scheduleDetails.date} has been ${scheduleDetails.status}.`;
+
+    return await this.sendNotificationToUser(
+      userId,
+      title,
+      message,
+      NotificationType.SCHEDULE,
+    );
+  }
+
+  public async sendScheduleUpdateNotification(
+    userId: string,
+    scheduleDetails: {
+      material: string;
+      amount: number;
+      date: string;
+      update: string;
+    },
+  ): Promise<Notification> {
+    const title = 'Schedule Update';
+    const message = `Your ${scheduleDetails.material} pickup scheduled for ${scheduleDetails.date} has been updated: ${scheduleDetails.update}`;
+
+    return await this.sendNotificationToUser(
+      userId,
+      title,
+      message,
+      NotificationType.SCHEDULE,
+    );
+  }
+
   // Placeholder for push notification logic (e.g., using firebase-admin)
   private async sendPushNotification(token: string, title: string, message: string) {
     console.log(`Sending push notification to token: ${token}`)

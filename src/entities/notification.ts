@@ -22,6 +22,7 @@ export enum NotificationType {
   TRANSACTION_FAILED = 'transaction_failed',
   REMINDER = 'reminder',
   SECURITY_ALERT = 'security_alert',
+  SCHEDULE = 'schedule',
 }
 
 @Entity({ name: 'notifications' })

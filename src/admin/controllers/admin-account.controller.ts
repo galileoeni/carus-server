@@ -23,7 +23,8 @@ export const createAdmin = catchController(
       phone,
       password,
       country_code,
-    } = req.body as UserRow
+      admin_type,
+    } = req.body as UserRow & { admin_type?: 'master' | 'base' }
 
     // Check if all fields are passed
     const requiredFields = ['password', 'email', 'first_name', 'last_name']
@@ -168,6 +169,7 @@ export const createAdmin = catchController(
       dob: dob,
       country_code: country_code || '+234',
       status: 'ACTIVE',
+      admin_type: admin_type || 'base',
     })
 
     //save the user
@@ -373,6 +375,98 @@ export const assignAdmin = async (req: Request, res: Response) => {
           updatedUser,
           [],
           'Admin role assigned successfully',
+        ),
+      )
+  } catch (error) {
+    console.error(error)
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json(
+        generalResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          {},
+          [],
+          'An error occurred',
+        ),
+      )
+  }
+}
+
+export const promoteToMasterAdmin = async (req: Request, res: Response) => {
+  const { id } = req.params
+
+  try {
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
+    }
+
+    if (user.role !== UserRoleEnum.ADMIN) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(generalResponse(StatusCodes.BAD_REQUEST, {}, [], 'User must be an admin to be promoted to master admin'))
+    }
+
+    user.admin_type = 'master'
+    const updatedUser = await userRepository.save(user)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          updatedUser,
+          [],
+          'Admin promoted to Master Admin successfully',
+        ),
+      )
+  } catch (error) {
+    console.error(error)
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json(
+        generalResponse(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          {},
+          [],
+          'An error occurred',
+        ),
+      )
+  }
+}
+
+export const demoteToBaseAdmin = async (req: Request, res: Response) => {
+  const { id } = req.params
+
+  try {
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
+    }
+
+    if (user.role !== UserRoleEnum.ADMIN) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(generalResponse(StatusCodes.BAD_REQUEST, {}, [], 'User must be an admin to be demoted to base admin'))
+    }
+
+    user.admin_type = 'base'
+    const updatedUser = await userRepository.save(user)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          updatedUser,
+          [],
+          'Admin demoted to Base Admin successfully',
         ),
       )
   } catch (error) {

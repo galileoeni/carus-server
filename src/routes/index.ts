@@ -10,6 +10,7 @@ import redemptionRoutes from '../redemption/routes'
 import scheduleRoutes from '../schedule/routes'
 import transactionRoutes from '../transactions/routes'
 import walletRoutes from '../wallet/routes'
+import chatbotRoutes from '../chatbot/routes/chatbot.routes'
 
 const router = Router()
 
@@ -23,5 +24,6 @@ router.use('/transactions', transactionRoutes)
 router.use('/wallet', walletRoutes)
 router.use('/configurations', configurationRoutes)
 router.use('/contact', contactRoutes)
+router.use('/chatbot', chatbotRoutes)
 
 export default router
