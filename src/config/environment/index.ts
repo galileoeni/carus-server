@@ -11,6 +11,7 @@ const env = {
     JWT_SECRET: process.env.JWT_SECRET,
   },
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS as string,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY as string,
   // getDevBaseUrl() {
   //     const self = env
   //     if(self.ENVIRONMENT.development || self.ENVIRONMENT.test){

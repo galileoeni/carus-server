@@ -129,10 +129,17 @@ export const loginAdmin = catchController(
         generalResponse(
           StatusCodes.OK,
           {
+            id: user.id,
             username: user.username,
+            first_name: user.first_name,
+            last_name: user.last_name,
             email: user.email,
             status: user.status,
             role: user.role,
+            admin_type: user.admin_type,
+            avatar: user.avatar,
+            created_at: user.createdAt,
+            updated_at: user.updatedAt,
             refresh_token: refresh_token,
             refresh_token_expires: refresh_token_expires,
             access_token: access_token,
@@ -1028,6 +1035,151 @@ export const getAllAccounts = catchController(
         [],
         returnSuccess,
         pagination,
+      ),
+    )
+  },
+)
+
+export const getAllUsers = catchController(
+  async (req: Request, res: Response) => {
+    const page = parseInt(req.query.page as string, 10) || 1
+    const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+    const [users, totalCount] = await userRepository.findAndCount({
+      relations: {
+        wallet: true,
+      },
+      where: {
+        role: UserRoleEnum.USER,
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    })
+
+    const pagination: Pagination = {
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalCount / Number(pageSize)),
+      pageSize: Number(pageSize),
+      totalCount,
+    }
+
+    res.status(StatusCodes.OK).json(
+      generalResponse(
+        StatusCodes.OK,
+        users.map((user) => ({
+          id: user.id,
+          google_id: user.googleId,
+          address: `${user.address} ${user.city} ${user.region}`,
+          username: user.username,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          dob: user.dob,
+          gender: user.gender,
+          phone: user.phone,
+          status: user.status,
+          role: user.role,
+          created_at: user.createdAt,
+          updated_at: user.updatedAt,
+          wallet: user.wallet,
+        })),
+        [],
+        returnSuccess,
+        pagination,
+      ),
+    )
+  },
+)
+
+export const getAllAdmins = catchController(
+  async (req: Request, res: Response) => {
+    const page = parseInt(req.query.page as string, 10) || 1
+    const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+    const [admins, totalCount] = await userRepository.findAndCount({
+      relations: {
+        wallet: true,
+      },
+      where: {
+        role: UserRoleEnum.ADMIN,
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    })
+
+    const pagination: Pagination = {
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalCount / Number(pageSize)),
+      pageSize: Number(pageSize),
+      totalCount,
+    }
+
+    res.status(StatusCodes.OK).json(
+      generalResponse(
+        StatusCodes.OK,
+        admins.map((admin) => ({
+          id: admin.id,
+          google_id: admin.googleId,
+          address: `${admin.address} ${admin.city} ${admin.region}`,
+          username: admin.username,
+          first_name: admin.first_name,
+          last_name: admin.last_name,
+          email: admin.email,
+          dob: admin.dob,
+          gender: admin.gender,
+          phone: admin.phone,
+          status: admin.status,
+          role: admin.role,
+          admin_type: admin.admin_type,
+          created_at: admin.createdAt,
+          updated_at: admin.updatedAt,
+          wallet: admin.wallet,
+        })),
+        [],
+        returnSuccess,
+        pagination,
+      ),
+    )
+  },
+)
+
+export const getUserById = catchController(
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+
+    const user = await userRepository.findOne({
+      where: { id: id.toString() },
+      relations: {
+        wallet: true,
+      },
+    })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], userNotFound))
+    }
+
+    res.status(StatusCodes.OK).json(
+      generalResponse(
+        StatusCodes.OK,
+        {
+          id: user.id,
+          google_id: user.googleId,
+          address: `${user.address} ${user.city} ${user.region}`,
+          username: user.username,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          dob: user.dob,
+          gender: user.gender,
+          phone: user.phone,
+          status: user.status,
+          role: user.role,
+          created_at: user.createdAt,
+          updated_at: user.updatedAt,
+          wallet: user.wallet,
+        },
+        [],
+        returnSuccess,
       ),
     )
   },

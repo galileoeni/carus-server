@@ -23,8 +23,22 @@ export const getDonations = catchController(
       relations: ['contributions', 'contributions.user'],
     })
 
+    // Filter out sensitive user data
+    const sanitizedDonations = donations.map(donation => ({
+      ...donation,
+      contributions: donation.contributions?.map(contribution => ({
+        ...contribution,
+        user: contribution.user ? {
+          id: contribution.user.id,
+          first_name: contribution.user.first_name,
+          last_name: contribution.user.last_name,
+          email: contribution.user.email,
+        } : null
+      }))
+    }))
+
     res.status(StatusCodes.OK).json(
-      generalResponse(StatusCodes.OK, donations, [], returnSuccess, {
+      generalResponse(StatusCodes.OK, sanitizedDonations, [], returnSuccess, {
         totalCount: total,
         currentPage: page,
         totalPages: Math.ceil(total / limit),
@@ -48,8 +62,22 @@ export const getDonation = catchController(
         .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
     }
 
+    // Filter out sensitive user data
+    const sanitizedCampaign = {
+      ...campaign,
+      contributions: campaign.contributions?.map(contribution => ({
+        ...contribution,
+        user: contribution.user ? {
+          id: contribution.user.id,
+          first_name: contribution.user.first_name,
+          last_name: contribution.user.last_name,
+          email: contribution.user.email,
+        } : null
+      }))
+    }
+
     res
       .status(StatusCodes.OK)
-      .json(generalResponse(StatusCodes.OK, campaign, [], returnSuccess))
+      .json(generalResponse(StatusCodes.OK, sanitizedCampaign, [], returnSuccess))
   },
 )

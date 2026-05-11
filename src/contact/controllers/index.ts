@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import { User } from 'src/entities/user'
+import { User } from '../../entities/user'
 
 import { generalResponse, userNotFound } from '../../helpers/constants'
 import { sendContactMessage } from '../../helpers/emailService'

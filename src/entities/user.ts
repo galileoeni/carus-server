@@ -80,6 +80,13 @@ export class User {
   })
   role?: UserRoleEnum
 
+  @Column({
+    type: 'enum',
+    enum: ['master', 'base'],
+    nullable: true,
+  })
+  admin_type?: 'master' | 'base'
+
   @Column({ nullable: false })
   @IsDefined()
   @IsString()

@@ -1,5 +1,5 @@
 import jwt, { JwtPayload } from 'jsonwebtoken'
-import { UserRow } from 'src/@types/user'
+import { UserRow } from '../@types/user'
 
 const EMAIL_VERIFICATION_EXPIRY = '10m' // 10 minutes
 const EMAIL_VERIFICATION_SECRET = process.env.JWT_SECRET as string
