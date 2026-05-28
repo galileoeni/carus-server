@@ -23,6 +23,8 @@ import {
   removeAdmin,
   promoteToMasterAdmin,
   demoteToBaseAdmin,
+  deactivateUser,
+  manualPayment,
 } from '../controllers/admin-account.controller'
 import {
   getDonation,
@@ -61,6 +63,8 @@ router.get('/schedules', verifyAdmin, getAllSchedules)
 router.get('/accounts', verifyAdmin, getAllAccounts)
 router.get('/users', verifyAdmin, getAllUsers)
 router.get('/users/:id', verifyAdmin, getUserById)
+router.post('/users/:id/payment', verifyAdmin, manualPayment)
+router.delete('/users/:id', verifyAdmin, deactivateUser)
 router.get('/admins', verifyAdmin, getAllAdmins)
 router.get('/total-wallet-amount', verifyAdmin, getTotalWalletAmount)
 router.get('/donations', verifyAdmin, getDonations)
