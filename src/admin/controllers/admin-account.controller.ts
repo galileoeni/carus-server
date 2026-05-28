@@ -7,6 +7,9 @@ import { UserRoleEnum, UserRow } from '../../@types/user'
 import { userRepository, walletRepository } from '../../auth/controllers'
 import { validateOtp } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
+import { AppDataSource } from '../../data-source'
+import { Transaction, TransactionType, TransactionDirection, TransactionStatus } from '../../entities/transactions'
+import { Configurations } from '../../entities/configurations'
 import { generalResponse, passwordRegex } from '../../helpers/constants'
 import { errorMessages } from '../../helpers/error-messages'
 import generateToken from '../../helpers/generateToken'
@@ -563,3 +566,117 @@ export const removeSuperAdmin = async (req: Request, res: Response) => {
       )
   }
 }
+
+export const deactivateUser = catchController(
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+
+    const user = await userRepository.findOne({ where: { id: id.toString() } })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
+    }
+
+    user.status = 'DEACTIVATED'
+    user.isDisabled = true
+    const updatedUser = await userRepository.save(user)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          updatedUser,
+          [],
+          'User account deactivated successfully',
+        ),
+      )
+  },
+)
+
+export const manualPayment = catchController(
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+    const { amount, description } = req.body
+
+    const parsedAmount = parseFloat(amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(
+          generalResponse(
+            StatusCodes.BAD_REQUEST,
+            {},
+            [],
+            'Please provide a valid positive amount',
+          ),
+        )
+    }
+
+    const user = await userRepository.findOne({
+      where: { id: id.toString() },
+      relations: { wallet: true },
+    })
+
+    if (!user) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'User not found'))
+    }
+
+    const transactionRepository = AppDataSource.getRepository(Transaction)
+    const configurationRepository = AppDataSource.getRepository(Configurations)
+
+    const pointToNaira = await configurationRepository.findOne({
+      where: { type: 'point_to_naira' },
+    })
+    const rate = parseFloat(pointToNaira?.value || '10')
+
+    // Convert Naira amount to Points
+    const pointsToAdd = parsedAmount * rate
+
+    let wallet = user.wallet
+    if (!wallet) {
+      // Create wallet if it doesn't exist
+      const walletRepository = AppDataSource.getRepository(Wallet)
+      wallet = walletRepository.create({
+        user: user,
+        points: 0,
+      })
+      await walletRepository.save(wallet)
+    }
+
+    wallet.points = Number(wallet.points || 0) + pointsToAdd
+    const walletRepository = AppDataSource.getRepository(Wallet)
+    await walletRepository.save(wallet)
+
+    // Save credit transaction
+    const transaction = new Transaction()
+    transaction.user = user
+    transaction.date = new Date()
+    transaction.type = TransactionType.CASH
+    transaction.direction = TransactionDirection.CREDIT
+    transaction.amount = parsedAmount
+    transaction.charges = 0
+    transaction.status = TransactionStatus.COMPLETED
+    transaction.description = description || `Manual wallet adjustment / payment credit of ₦${parsedAmount.toLocaleString()}`
+    transaction.wallet = wallet
+    await transactionRepository.save(transaction)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          {
+            points: wallet.points,
+            naira_amount: wallet.points / rate,
+          },
+          [],
+          `User payment updated successfully. Wallet credited with ${pointsToAdd} points (₦${parsedAmount.toLocaleString()}).`,
+        ),
+      )
+  },
+)

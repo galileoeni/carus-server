@@ -19,6 +19,7 @@ import { UserRoleEnum } from '../../@types/user'
 import { Configurations } from '../../entities/configurations'
 import { Redemption, RedemptionStatus } from '../../entities/redemption'
 import { Schedule } from '../../entities/schedule'
+import { Contribution } from '../../entities/contribution'
 import { User } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
 import generateToken from '../../helpers/generateToken'
@@ -1149,6 +1150,12 @@ export const getUserById = catchController(
       where: { id: id.toString() },
       relations: {
         wallet: true,
+        orders: true, // schedules
+        transactions: true,
+        redemptions: true,
+        contributions: {
+          donation: true,
+        },
       },
     })
 
@@ -1158,13 +1165,22 @@ export const getUserById = catchController(
         .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], userNotFound))
     }
 
+    const pointToNairaConfig = await configurationRepository.findOne({
+      where: { type: 'point_to_naira' },
+    })
+    const rate = parseFloat(pointToNairaConfig?.value || '10')
+    const walletPoints = Number(user.wallet?.points || 0)
+    const walletNaira = rate > 0 ? walletPoints / rate : 0
+
+    const formattedAddress = `${user.address || ''} ${user.city || ''} ${user.region || ''}`.trim() || '—'
+
     res.status(StatusCodes.OK).json(
       generalResponse(
         StatusCodes.OK,
         {
           id: user.id,
           google_id: user.googleId,
-          address: `${user.address} ${user.city} ${user.region}`,
+          address: formattedAddress,
           username: user.username,
           first_name: user.first_name,
           last_name: user.last_name,
@@ -1176,7 +1192,19 @@ export const getUserById = catchController(
           role: user.role,
           created_at: user.createdAt,
           updated_at: user.updatedAt,
-          wallet: user.wallet,
+          wallet: user.wallet ? {
+            ...user.wallet,
+            naira_amount: walletNaira,
+          } : null,
+          schedules: user.orders ? user.orders.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()) : [],
+          transactions: user.transactions ? user.transactions.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()) : [],
+          redemptions: user.redemptions ? user.redemptions.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()) : [],
+          contributions: user.contributions ? user.contributions.map(c => ({
+            id: c.id,
+            amount: c.amount,
+            createdAt: c.createdAt,
+            campaign_title: c.donation?.title,
+          })).sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()) : [],
         },
         [],
         returnSuccess,
