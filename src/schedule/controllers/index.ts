@@ -21,6 +21,8 @@ import { User } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
 import catchController from '../../utils/catchControllerAsyncs'
 import { AppDataSource } from '../../data-source'
+import { notificationService } from '../../services/notification.service'
+import { NotificationType } from '../../entities/notification'
 
 const passRequredFieldsMessage =
   'Please make sure you pass all the required fields'
@@ -230,6 +232,15 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
   })
 
   await scheduleRepository.save(newSchedule)
+
+  // Send in-app notification to the user
+  const categoryLabel = category === CategoryEnum.DROPOFF ? 'dropoff' : 'pickup'
+  notificationService.createNotification(
+    user,
+    'Schedule Booked',
+    `Your ${categoryLabel} for ${material} has been booked for ${date.toDateString()}. We will notify you once it is accepted.`,
+    NotificationType.SCHEDULE,
+  ).catch(() => {/* non-blocking */})
 
   return res
     .status(StatusCodes.OK)

@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { AppDataSource } from '../../data-source'
-import { Contact } from '../../entities/contact'
+import { Contact, ComplaintStatus } from '../../entities/contact'
 import { User } from '../../entities/user'
 import {
   generalResponse,
@@ -43,9 +43,17 @@ export const toggleUserStatus = catchController(
 export const viewComplaints = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string, 10) || 1
   const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+  const status = req.query.status as string | undefined
+
   const contactRepository = AppDataSource.getRepository(Contact)
+
+  const where: Record<string, any> = {}
+  if (status) where.status = status
+
   const [complaints, totalCount] = await contactRepository.findAndCount({
     relations: ['user'],
+    where,
+    order: { createdAt: 'DESC' },
     skip: (page - 1) * pageSize,
     take: pageSize,
   })
@@ -68,3 +76,25 @@ export const viewComplaints = async (req: Request, res: Response) => {
       ),
     )
 }
+
+export const resolveComplaint = catchController(
+  async (req: Request, res: Response) => {
+    const id = req.params.id as string
+    const contactRepository = AppDataSource.getRepository(Contact)
+
+    const complaint = await contactRepository.findOne({ where: { id } })
+
+    if (!complaint) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, {}, [], 'Complaint not found'))
+    }
+
+    complaint.status = ComplaintStatus.RESOLVED
+    await contactRepository.save(complaint)
+
+    return res
+      .status(StatusCodes.OK)
+      .json(generalResponse(StatusCodes.OK, complaint, [], 'Complaint resolved successfully'))
+  },
+)

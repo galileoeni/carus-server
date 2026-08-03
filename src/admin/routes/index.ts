@@ -33,6 +33,7 @@ import {
 import {
   toggleUserStatus,
   viewComplaints,
+  resolveComplaint,
 } from '../controllers/admin-management.controller'
 import adminConfigurationRoutes from '../../configurations/routes/adminRoutes'
 import verifyAdmin from '../../helpers/verifyAdmin'
@@ -45,8 +46,8 @@ router.post('/login', loginAdmin)
 
 router.get('/dashboard', verifyAdmin, getDashboardData)
 
-// Admin Management Routes
-router.post('/create-admin', verifyAdmin, createAdmin)
+// Admin Management Routes (master admin only)
+router.post('/create-admin', verifyMasterAdmin, createAdmin)
 router.patch('/assign-admin/:id', verifyAdmin, assignAdmin)
 router.patch('/remove-admin/:id', verifyAdmin, removeAdmin)
 router.patch('/toggle-user-status/:id', verifyAdmin, toggleUserStatus)
@@ -70,6 +71,7 @@ router.get('/total-wallet-amount', verifyAdmin, getTotalWalletAmount)
 router.get('/donations', verifyAdmin, getDonations)
 router.get('/donations/:id', verifyAdmin, getDonation)
 router.get('/complaints', verifyAdmin, viewComplaints)
+router.patch('/complaints/:id/resolve', verifyAdmin, resolveComplaint)
 router.get('/transactions', verifyAdmin, getAllTransactions)
 router.use('/configurations', verifyAdmin, adminConfigurationRoutes)
 

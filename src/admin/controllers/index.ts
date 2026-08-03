@@ -27,7 +27,7 @@ import catchController from '../../utils/catchControllerAsyncs'
 import { AppDataSource } from '../../data-source'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
-import { In } from 'typeorm'
+import { In, ILike } from 'typeorm'
 
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
@@ -355,9 +355,16 @@ export const getAllTransactions = catchController(
   async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string, 10) || 1
     const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+    const status = req.query.status as string | undefined
+
+    const where: Record<string, any> = {}
+    if (status) where.status = status
+
     const [transactions, totalCount] = await transactionRepository.findAndCount(
       {
         relations: ['user', 'wallet'],
+        where,
+        order: { createdAt: 'DESC' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       },
@@ -557,7 +564,8 @@ export const acceptSchedule = catchController(
     }
 
     const existingSchedule = await scheduleRepository.findOne({
-      where: { id: id }, // TypeScript is happy now because 'id' is strictly a string
+      where: { id: id },
+      relations: { user: true },
     })
     if (!existingSchedule) {
       return res
@@ -604,6 +612,19 @@ export const acceptSchedule = catchController(
 
     existingSchedule.status = 'accepted'
     await scheduleRepository.save(existingSchedule)
+
+    // Notify the user that their schedule has been accepted
+    const scheduleUser = await userRepository.findOne({
+      where: { id: existingSchedule.user?.id ?? '' },
+    })
+    if (scheduleUser) {
+      notificationService.createNotification(
+        scheduleUser,
+        'Schedule Accepted!',
+        `Your ${existingSchedule.category} schedule for ${existingSchedule.material} has been accepted. Please be ready on ${existingSchedule.date ? new Date(existingSchedule.date).toDateString() : 'the scheduled date'}.`,
+        NotificationType.SCHEDULE,
+      ).catch(() => {/* non-blocking */})
+    }
 
     return res
       .status(StatusCodes.OK)
@@ -908,11 +929,18 @@ export const getAllSchedules = catchController(
   async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string, 10) || 1
     const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+    const status = req.query.status as string | undefined
+
+    const where: Record<string, any> = {}
+    if (status) where.status = status
+
     const [schedules, totalCount] = await scheduleRepository.findAndCount({
       relations: {
         user: true,
         transaction: true,
       },
+      where,
+      order: { schedule_date: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     })
@@ -1045,13 +1073,26 @@ export const getAllUsers = catchController(
   async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string, 10) || 1
     const pageSize = parseInt(req.query.pageSize as string, 10) || 10
+    const search = req.query.search as string | undefined
+    const status = req.query.status as string | undefined
+
+    const baseWhere: Record<string, any> = { role: UserRoleEnum.USER }
+    if (status) baseWhere.status = status
+
+    const where = search
+      ? [
+          { ...baseWhere, first_name: ILike(`%${search}%`) },
+          { ...baseWhere, last_name: ILike(`%${search}%`) },
+          { ...baseWhere, email: ILike(`%${search}%`) },
+        ]
+      : baseWhere
+
     const [users, totalCount] = await userRepository.findAndCount({
       relations: {
         wallet: true,
       },
-      where: {
-        role: UserRoleEnum.USER,
-      },
+      where,
+      order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     })
@@ -1102,6 +1143,7 @@ export const getAllAdmins = catchController(
       where: {
         role: UserRoleEnum.ADMIN,
       },
+      order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     })
