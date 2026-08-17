@@ -23,6 +23,7 @@ import catchController from '../../utils/catchControllerAsyncs'
 import { AppDataSource } from '../../data-source'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
+import { sendScheduleBookedEmail } from '../../helpers/emailService'
 
 const passRequredFieldsMessage =
   'Please make sure you pass all the required fields'
@@ -233,7 +234,7 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
 
   await scheduleRepository.save(newSchedule)
 
-  // Send in-app notification to the user
+  // Send in-app notification and booking confirmation email (both non-blocking)
   const categoryLabel = category === CategoryEnum.DROPOFF ? 'dropoff' : 'pickup'
   notificationService.createNotification(
     user,
@@ -241,6 +242,16 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
     `Your ${categoryLabel} for ${material} has been booked for ${date.toDateString()}. We will notify you once it is accepted.`,
     NotificationType.SCHEDULE,
   ).catch(() => {/* non-blocking */})
+
+  if (user.email && user.first_name) {
+    sendScheduleBookedEmail(
+      user.first_name,
+      user.email,
+      categoryLabel,
+      material,
+      date.toDateString(),
+    ).catch(() => {/* non-blocking */})
+  }
 
   return res
     .status(StatusCodes.OK)

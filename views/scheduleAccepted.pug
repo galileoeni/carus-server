@@ -1,0 +1,23 @@
+extends baseEmail
+
+block content
+  p.preheader Your #{category} for #{material} has been accepted — please be ready on #{date}.
+
+  h4(style='font-weight: bold; margin-bottom: 8px;') Hi #{first_name},
+  p Your <strong>#{category}</strong> request has been <strong style='color: #026937;'>accepted</strong>! Here are the details:
+
+  table(role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 20px 0; background: #f0faf4; border-left: 4px solid #026937; border-radius: 4px; padding: 16px; width: 100%;')
+    tbody
+      tr
+        td
+          p(style='margin: 0 0 8px;') 📦 &nbsp;<strong>Material:</strong> &nbsp;#{material}
+          p(style='margin: 0 0 8px;') 🚛 &nbsp;<strong>Type:</strong> &nbsp;#{category}
+          p(style='margin: 0;') 📅 &nbsp;<strong>Date:</strong> &nbsp;#{date}
+
+  p Please ensure you are available and have your items ready on the scheduled date. Our team will arrive to handle the #{category}.
+
+  p If you need to make any changes, please contact us through the Carus app as soon as possible.
+
+  p(style='margin-top: 24px;') Thank you for contributing to a cleaner environment!
+  p
+    strong The Carus Recycling Team

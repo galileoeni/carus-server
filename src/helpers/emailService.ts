@@ -75,6 +75,64 @@ export const sendContactMessage = async (
   }
 }
 
+// Send a booking confirmation email when a schedule is created
+export const sendScheduleBookedEmail = async (
+  first_name: string,
+  email: string,
+  category: string,
+  material: string,
+  date: string,
+) => {
+  try {
+    const html = renderTemplate('scheduleBooked.pug', {
+      first_name,
+      subject: 'Your Carus booking is confirmed',
+      category,
+      material,
+      date,
+    })
+
+    const info = await resend.emails.send({
+      from: `CARUS RECYCLING <${getRequiredEnv('FROM_MAIL')}>`,
+      to: email,
+      subject: 'Your Carus booking is confirmed',
+      html,
+    })
+    return info
+  } catch (error) {
+    console.error('Email Service Error (scheduleBooked):', error)
+  }
+}
+
+// Send an acceptance notification email when admin accepts a schedule
+export const sendScheduleAcceptedEmail = async (
+  first_name: string,
+  email: string,
+  category: string,
+  material: string,
+  date: string,
+) => {
+  try {
+    const html = renderTemplate('scheduleAccepted.pug', {
+      first_name,
+      subject: 'Your Carus schedule has been accepted',
+      category,
+      material,
+      date,
+    })
+
+    const info = await resend.emails.send({
+      from: `CARUS RECYCLING <${getRequiredEnv('FROM_MAIL')}>`,
+      to: email,
+      subject: 'Your Carus schedule has been accepted',
+      html,
+    })
+    return info
+  } catch (error) {
+    console.error('Email Service Error (scheduleAccepted):', error)
+  }
+}
+
 // Send a password reset email
 export const sendPasswordResetToken = async (
   first_name: string,

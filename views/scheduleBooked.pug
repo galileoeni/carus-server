@@ -1,0 +1,23 @@
+extends baseEmail
+
+block content
+  p.preheader Your #{category} booking for #{material} is confirmed — we'll be in touch soon.
+
+  h4(style='font-weight: bold; margin-bottom: 8px;') Hi #{first_name},
+  p Great news — your <strong>#{category}</strong> request for <strong>#{material}</strong> has been received and is now booked.
+
+  table(role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 20px 0; background: #f9f9f9; border-radius: 6px; padding: 16px; width: 100%;')
+    tbody
+      tr
+        td
+          p(style='margin: 0 0 8px;') 📦 &nbsp;<strong>Material:</strong> &nbsp;#{material}
+          p(style='margin: 0 0 8px;') 🚛 &nbsp;<strong>Type:</strong> &nbsp;#{category}
+          p(style='margin: 0;') 📅 &nbsp;<strong>Scheduled date:</strong> &nbsp;#{date}
+
+  p Our team will review your request and confirm acceptance shortly. You'll receive another email once your schedule has been accepted.
+
+  p If you have questions, feel free to reply to this email or reach out through the Carus app.
+
+  p(style='margin-top: 24px;') Thank you for recycling with Carus!
+  p
+    strong The Carus Recycling Team
