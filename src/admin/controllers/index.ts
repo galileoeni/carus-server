@@ -28,6 +28,7 @@ import { AppDataSource } from '../../data-source'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
 import { In, ILike } from 'typeorm'
+import { sendScheduleAcceptedEmail } from '../../helpers/emailService'
 
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
@@ -618,12 +619,27 @@ export const acceptSchedule = catchController(
       where: { id: existingSchedule.user?.id ?? '' },
     })
     if (scheduleUser) {
+      const acceptedDateStr = existingSchedule.date
+        ? new Date(existingSchedule.date).toDateString()
+        : 'the scheduled date'
+      const categoryLabel = existingSchedule.category ?? 'pickup'
+
       notificationService.createNotification(
         scheduleUser,
         'Schedule Accepted!',
-        `Your ${existingSchedule.category} schedule for ${existingSchedule.material} has been accepted. Please be ready on ${existingSchedule.date ? new Date(existingSchedule.date).toDateString() : 'the scheduled date'}.`,
+        `Your ${categoryLabel} schedule for ${existingSchedule.material} has been accepted. Please be ready on ${acceptedDateStr}.`,
         NotificationType.SCHEDULE,
       ).catch(() => {/* non-blocking */})
+
+      if (scheduleUser.email && scheduleUser.first_name) {
+        sendScheduleAcceptedEmail(
+          scheduleUser.first_name,
+          scheduleUser.email,
+          categoryLabel,
+          existingSchedule.material ?? 'your items',
+          acceptedDateStr,
+        ).catch(() => {/* non-blocking */})
+      }
     }
 
     return res
