@@ -13,7 +13,7 @@ class SocketService {
     this.io = new SocketIOServer(server, {
       cors: {
         origin: env.ALLOWED_ORIGINS
-          ? env.ALLOWED_ORIGINS.split(',')
+          ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
           : 'http://localhost:3000',
         methods: ['GET', 'POST'],
       },

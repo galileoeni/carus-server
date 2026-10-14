@@ -17,5 +17,5 @@
     "typeRoots": ["src/@types, node_modules/@types"]
   },
   "include": ["views/**/*.pug", "src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/migrations-legacy"]
 }

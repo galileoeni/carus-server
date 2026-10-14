@@ -2,56 +2,57 @@ import * as Sentry from '@sentry/node'
 
 import env from './config/environment/index'
 Sentry.init({
-  dsn: 'https://01c7dc98a8e0749f6e417433d1d60c9b@o4510017484881920.ingest.us.sentry.io/4510017487634432',
+  dsn: env.SENTRY_DSN,
   sendDefaultPii: true,
   environment: env.ENVIRONMENT,
   enableLogs: true,
 })
 
 import bodyParser from 'body-parser'
+import { RedisStore } from 'connect-redis'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
-import session from 'express-session'
-import passport from 'passport'
 import { rateLimit } from 'express-rate-limit'
-import path from 'path'
+import session from 'express-session'
 import http from 'http'
-import createMemoryStore from 'memorystore'
+import passport from 'passport'
+import path from 'path'
+import { RedisStore as RateLimitRedisStore } from 'rate-limit-redis'
 import 'reflect-metadata'
 
+import { createRedisClient } from './config/redis'
 import { AppDataSource } from './data-source'
-import { socketService } from './services/socket.service'
 // import { reminderService } from './services/reminder.service'
 import mainRoutes from './routes'
 import adminRoutes from './routes/adminRoutes'
+import { socketService } from './services/socket.service'
 import { getUptime } from './utils/helper'
 
-const MemoryStore = createMemoryStore(session)
 const startServer = async () => {
   const app: express.Application = express()
 
-  AppDataSource.initialize()
-    .then(() => {
-      console.log('Data Source Initialized')
-    })
-    .catch((err) => {
-      console.error('Error during Data Source Initialization', err)
-      throw err
-    })
+  await AppDataSource.initialize()
+  console.log('Data Source Initialized')
+  // Fail the boot (and the deploy) if a migration fails
+  const migrations = await AppDataSource.runMigrations()
+  console.log(`Migrations run: ${migrations.length}`)
 
-  // Trust proxy for rate limiting behind reverse proxies (Nginx, Vercel, etc)
+  const redis = await createRedisClient()
+  const isProduction = env.ENVIRONMENT === 'production'
+
+  // Trust proxy for rate limiting behind reverse proxies (Traefik, Nginx, etc)
   app.set('trust proxy', 1)
 
-  // CORS Configuration
+  // CORS Configuration (no wildcard fallback: unset means no cross-origin access)
+  const allowedOrigins = env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+    : env.ENVIRONMENT === 'development'
+    ? ['http://localhost:3000']
+    : []
   app.use(
     cors({
-      origin:
-        env.ENVIRONMENT === 'development'
-          ? 'http://localhost:3000'
-          : env.ALLOWED_ORIGINS
-          ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-          : '*',
+      origin: allowedOrigins,
       credentials: true,
     }),
   )
@@ -64,18 +65,31 @@ const startServer = async () => {
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
     message:
       'Too many requests from this IP, please try again after 15 minutes',
+    ...(redis && {
+      store: new RateLimitRedisStore({
+        prefix: 'carus:rl:',
+        sendCommand: (...args: string[]) => redis.sendCommand(args),
+      }),
+    }),
   })
 
   // Apply the rate limiting middleware to all requests.
   app.use(limiter)
   app.use(
     session({
-      store: new MemoryStore({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
+      // Falls back to the in-memory store when Redis isn't configured (local dev)
+      store: redis
+        ? new RedisStore({ client: redis, prefix: 'carus:sess:' })
+        : undefined,
       secret: env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isProduction,
+        maxAge: 24 * 60 * 60 * 1000,
+      },
     }) as any,
   )
 
@@ -88,35 +102,39 @@ const startServer = async () => {
     throw new Error("Test Sentry error! It's nothing to worry about!")
   })
 
-  app.get('/health', async (req, res) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const healthCheck: Record<string, any> = {
+  app.get('/health', async (_req, res) => {
+    const healthCheck: Record<string, string | number> = {
       server: 'up',
       version: 'v1',
       uptime: getUptime(),
     }
 
     try {
-      const status = AppDataSource.isInitialized
+      await AppDataSource.query('SELECT 1')
       healthCheck.database = 'up'
-      console.log('AppDataSource.isInitialized:', status)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err) {
       healthCheck.database = 'down'
-      console.log('AppDataSource.isInitialized:', healthCheck.database)
-      console.error('Error during Data Source Initialization', err)
+      console.error('Health check: database unreachable', err)
     }
-    const allHealthy =
-      healthCheck.server === 'up' && healthCheck.database === 'up'
-    console.log('AllHealthy:', allHealthy)
 
+    if (redis) {
+      try {
+        await redis.ping()
+        healthCheck.redis = 'up'
+      } catch (err) {
+        healthCheck.redis = 'down'
+        console.error('Health check: redis unreachable', err)
+      }
+    }
+
+    const allHealthy = Object.values(healthCheck).every((v) => v !== 'down')
     return res.status(allHealthy ? 200 : 503).json(healthCheck)
   })
 
   app.use('/v1', mainRoutes)
   app.use('/v1/admin', adminRoutes)
   app.set('view engine', 'pug')
-  app.set('views', path.join(__dirname + '../views'))
+  app.set('views', path.join(__dirname, '../views'))
 
   const httpServer = http.createServer(app)
   socketService.init(httpServer)
@@ -128,6 +146,20 @@ const startServer = async () => {
 
   Sentry.setupExpressErrorHandler(app)
 
+  // Graceful shutdown so redeploys don't drop in-flight requests
+  const shutdown = (signal: string) => {
+    console.log(`${signal} received, shutting down`)
+    const force = setTimeout(() => process.exit(1), 10000)
+    force.unref()
+    server.close(async () => {
+      await redis?.quit().catch(() => undefined)
+      await AppDataSource.destroy().catch(() => undefined)
+      process.exit(0)
+    })
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+  process.on('SIGINT', () => shutdown('SIGINT'))
+
   server.on('listening', () => {
     const used = process.memoryUsage()
     console.log('Memory Usage:')
@@ -137,4 +169,7 @@ const startServer = async () => {
   })
 }
 
-startServer()
+startServer().catch((err) => {
+  console.error('Failed to start server', err)
+  process.exit(1)
+})

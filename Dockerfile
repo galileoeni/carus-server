@@ -1,34 +1,41 @@
-# Stage 1: Build the TypeScript application
+# syntax=docker/dockerfile:1
+
+# ---- Build: compile TypeScript with all dependencies ----
 FROM node:20-alpine AS build
+WORKDIR /app
 
-# Set the working directory inside the container
-WORKDIR /usr/src/app
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --ignore-scripts
 
-# Copy package.json and package-lock.json (or yarn.lock)
-COPY package*.json ./
-
-# Install dependencies
-RUN yarn install
-
-# Copy the rest of your source code
 COPY . .
+# tsc + copy Pug templates to dist/views
+RUN yarn build
 
-# Compile TypeScript to JavaScript (assuming your tsconfig outputs to /dist)
-RUN yarn run build 
-# NOTE: Ensure your package.json has a 'build' script, e.g., "tsc"
+# ---- Dependencies: production-only node_modules ----
+FROM node:20-alpine AS deps
+WORKDIR /app
 
-# ----------------------------------------------------------------------
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production --ignore-scripts \
+  && yarn cache clean
 
-# Stage 2: Create a smaller, production-ready image
+# ---- Runtime ----
 FROM node:20-alpine AS final
+WORKDIR /app
 
-WORKDIR /usr/src/app
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=5000
 
-# Copy only the necessary files from the build stage
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/package.json .
-COPY --from=build /usr/src/app/dist ./dist 
-# This is the crucial part: you are copying the compiled code
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --chown=node:node package.json ./
 
-# Define the command to run your compiled application
-CMD ["node", "dist/src/index.js"] 
+USER node
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT}/health" > /dev/null || exit 1
+
+# Migrations run automatically on boot (see src/index.ts)
+CMD ["node", "dist/src/index.js"]
