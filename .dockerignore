@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+.git
+.husky
+.vercel
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+docker-compose*.yml
+DOC.md
+README.md

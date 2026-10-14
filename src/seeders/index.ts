@@ -22,6 +22,11 @@ import { Wallet } from '../entities/wallet'
 import { AppDataSource } from '../data-source'
 
 const seedDatabase = async () => {
+  // This seeder drops the entire database. Use `yarn seed:prod` for real deployments.
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Refusing to run the dev seeder with NODE_ENV=production')
+    process.exit(1)
+  }
   try {
     console.log('🌱 Starting database seeding...')
 
@@ -34,7 +39,7 @@ const seedDatabase = async () => {
     // Clear existing data
     console.log('🗑️  Clearing existing data...')
     await AppDataSource.dropDatabase()
-    await AppDataSource.synchronize()
+    await AppDataSource.runMigrations()
 
     const userRepository = AppDataSource.getRepository(User)
     const walletRepository = AppDataSource.getRepository(Wallet)
