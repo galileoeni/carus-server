@@ -10,6 +10,7 @@ import { formatJoiError } from '../../utils/helper'
 import { updateConfigurationSchema } from '../../utils/validators/configuration'
 
 const configurationRepository = AppDataSource.getRepository(Configurations)
+export const PLASTIC_RECYCLED_KG = 'plastic_recycled_kg'
 
 export const createConfiguration = catchController(
   async (req: Request, res: Response) => {
@@ -107,11 +108,11 @@ export const updateConfiguration = catchController(
     })
 
     if (configuration) {
-      configuration.value = value
+      configuration.value = String(value)
     } else {
       configuration = configurationRepository.create({
         type: type,
-        value: value,
+        value: String(value),
       })
     }
 
@@ -202,6 +203,51 @@ export const setPointToNaira = catchController(
           configuration,
           [],
           'Point to naira value set successfully',
+        ),
+      )
+  },
+)
+
+export const getConfigurationByType = catchController(
+  async (req: Request, res: Response) => {
+    const type = req.params.type as string
+    const configuration = await configurationRepository.findOne({
+      where: { type },
+    })
+    if (!configuration) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(
+          generalResponse(
+            StatusCodes.NOT_FOUND,
+            {},
+            [],
+            `Configuration ${type} not found`,
+          ),
+        )
+    }
+    res
+      .status(StatusCodes.OK)
+      .json(generalResponse(StatusCodes.OK, configuration, [], returnSuccess))
+  },
+)
+
+// Public: headline impact figures for the website's impact page.
+// plastic_recycled_kg is set by admins on the dashboard Config page.
+export const getImpact = catchController(
+  async (_req: Request, res: Response) => {
+    const plastic = await configurationRepository.findOne({
+      where: { type: PLASTIC_RECYCLED_KG },
+    })
+    const plasticKg = Math.max(0, Number(plastic?.value) || 0)
+    res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          { plasticKg, updatedAt: plastic?.updatedAt ?? null },
+          [],
+          returnSuccess,
         ),
       )
   },
