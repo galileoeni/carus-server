@@ -5,9 +5,16 @@ import {
   deleteCampaign,
   getCampaign,
   getCampaigns,
+  getPublicCampaign,
+  getPublicCampaigns,
   updateCampaign,
 } from '../controllers/campaignController'
 import { createContribution } from '../controllers/contributionController'
+import {
+  initiateCashDonation,
+  paystackWebhook,
+  verifyCashDonation,
+} from '../controllers/paymentController'
 import verifyAdmin from '../../helpers/verifyAdmin'
 import verifyToken from '../../helpers/verifyToken'
 import upload from '../../utils/multer'
@@ -15,6 +22,13 @@ import upload from '../../utils/multer'
 const router = Router()
 const campaignPath = '/campaigns'
 const campaignIdPath = '/campaigns/:id'
+
+// Public routes
+router.get('/public/campaigns', getPublicCampaigns)
+router.get('/public/campaigns/:id', getPublicCampaign)
+router.post('/public/campaigns/:id/pay', initiateCashDonation)
+router.get('/public/payments/:reference', verifyCashDonation)
+router.post('/paystack/webhook', paystackWebhook)
 
 // User routes
 router.get(campaignPath, verifyToken, getCampaigns)

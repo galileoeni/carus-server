@@ -6,6 +6,8 @@ declare global {
   namespace Express {
     interface Request {
       user: MyUser
+      // Unparsed JSON body, needed to check Paystack webhook signatures
+      rawBody?: Buffer
     }
   }
 }
