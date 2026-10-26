@@ -131,7 +131,7 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
       .json(generalResponse(StatusCodes.NOT_FOUND, '', [], userNotFound))
   }
 
-  const wallet = await walletRepository.findOne({
+  let wallet = await walletRepository.findOne({
     relations: {
       user: true,
     },
@@ -141,6 +141,14 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
       },
     },
   })
+
+  // Users created before wallets were auto-provisioned may not have one
+  if (!wallet) {
+    wallet = new Wallet()
+    wallet.user = user
+    wallet.updatedAt = new Date(Date.now())
+    wallet = await walletRepository.save(wallet)
+  }
 
   if (!address) {
     return res

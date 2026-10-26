@@ -13,6 +13,8 @@ const DEFAULT_CONFIGURATIONS = [
   { type: 'min_redemption', value: '100' },
   { type: 'max_redemption', value: '10000' },
   { type: 'donation_platform_fee', value: '10' },
+  // Shown on the public impact page; admins update it on the Config page
+  { type: 'plastic_recycled_kg', value: '50000' },
 ]
 
 const DEFAULT_AVATAR =

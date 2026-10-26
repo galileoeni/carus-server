@@ -1,3 +1,4 @@
+import { isUUID } from 'class-validator'
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
@@ -20,6 +21,22 @@ import {
 } from '../../utils/validators/donation'
 
 const donationIdFromSql = 'donation.id'
+const campaignFields = [
+  donationIdFromSql,
+  'donation.title',
+  'donation.description',
+  'donation.target',
+  'donation.duration',
+  'donation.image',
+  'donation.createdAt',
+]
+const amountRaisedSql = 'COALESCE(SUM(contribution.amount), 0)'
+// Guests (cash donors without an account) have no userId, so each of their
+// contributions counts as one donor
+const numberOfDonorsSql =
+  'COUNT(DISTINCT COALESCE("contribution"."userId"::text, "contribution"."id"::text))'
+const contributionsRelation = 'donation.contributions'
+const donationIdCondition = 'donation.id = :id'
 
 export const createCampaign = catchController(
   async (req: Request, res: Response) => {
@@ -67,7 +84,7 @@ export const createCampaign = catchController(
 
 export const updateCampaign = catchController(
   async (req: Request, res: Response) => {
-    const id  = req.params.id as string
+    const id = req.params.id as string
     const { error } = updateCampaignSchema.validate(req.body)
     if (error) {
       const { details, message } = formatJoiError(error)
@@ -146,19 +163,10 @@ export const getCampaigns = catchController(
 
     const campaigns = await donationRepository
       .createQueryBuilder('donation')
-      .select([
-        donationIdFromSql,
-        'donation.title',
-        'donation.description',
-        'donation.target',
-        'donation.duration',
-        'donation.image',
-        'donation.createdAt',
-        'donation.updatedAt',
-      ])
-      .addSelect('COALESCE(SUM(contribution.amount), 0)', 'amountRaised')
-      .addSelect('COUNT(DISTINCT contribution.userId)', 'numberOfDonors')
-      .leftJoin('donation.contributions', 'contribution')
+      .select([...campaignFields, 'donation.updatedAt'])
+      .addSelect(amountRaisedSql, 'amountRaised')
+      .addSelect(numberOfDonorsSql, 'numberOfDonors')
+      .leftJoin(contributionsRelation, 'contribution')
       .groupBy(donationIdFromSql)
       .getRawMany()
 
@@ -190,20 +198,11 @@ export const getCampaign = catchController(
 
     const campaign = await donationRepository
       .createQueryBuilder('donation')
-      .select([
-        donationIdFromSql,
-        'donation.title',
-        'donation.description',
-        'donation.target',
-        'donation.duration',
-        'donation.image',
-        'donation.createdAt',
-        'donation.updatedAt',
-      ])
-      .addSelect('COALESCE(SUM(contribution.amount), 0)', 'amountRaised')
-      .addSelect('COUNT(DISTINCT contribution.userId)', 'numberOfDonors')
-      .leftJoin('donation.contributions', 'contribution')
-      .where('donation.id = :id', { id })
+      .select([...campaignFields, 'donation.updatedAt'])
+      .addSelect(amountRaisedSql, 'amountRaised')
+      .addSelect(numberOfDonorsSql, 'numberOfDonors')
+      .leftJoin(contributionsRelation, 'contribution')
+      .where(donationIdCondition, { id })
       .groupBy(donationIdFromSql)
       .getRawOne()
 
@@ -216,22 +215,25 @@ export const getCampaign = catchController(
     // Get contributions for this campaign
     const contributions = await donationRepository
       .createQueryBuilder('donation')
-      .leftJoinAndSelect('donation.contributions', 'contribution')
+      .leftJoinAndSelect(contributionsRelation, 'contribution')
       .leftJoinAndSelect('contribution.user', 'user')
-      .where('donation.id = :id', { id })
+      .where(donationIdCondition, { id })
       .getOne()
 
-    const formattedContributions = contributions?.contributions?.map(contribution => ({
-      id: contribution.id,
-      amount: contribution.amount,
-      createdAt: contribution.createdAt,
-      user: contribution.user ? {
-        id: contribution.user.id,
-        first_name: contribution.user.first_name,
-        last_name: contribution.user.last_name,
-        email: contribution.user.email,
-      } : null
-    })) || []
+    const formattedContributions =
+      contributions?.contributions?.map((contribution) => ({
+        id: contribution.id,
+        amount: contribution.amount,
+        createdAt: contribution.createdAt,
+        user: contribution.user
+          ? {
+              id: contribution.user.id,
+              first_name: contribution.user.first_name,
+              last_name: contribution.user.last_name,
+              email: contribution.user.email,
+            }
+          : null,
+      })) || []
 
     const formattedCampaign = {
       id: campaign.donation_id,
@@ -251,6 +253,81 @@ export const getCampaign = catchController(
       .status(StatusCodes.OK)
       .json(
         generalResponse(StatusCodes.OK, formattedCampaign, [], returnSuccess),
+      )
+  },
+)
+
+// Public (no auth): campaign details and totals only, never donor info.
+// Pending campaigns are drafts and stay hidden.
+const publicCampaignsQuery = () =>
+  AppDataSource.getRepository(Donation)
+    .createQueryBuilder('donation')
+    .select([...campaignFields, 'donation.status'])
+    .addSelect(amountRaisedSql, 'amountRaised')
+    .addSelect(numberOfDonorsSql, 'numberOfDonors')
+    .leftJoin(contributionsRelation, 'contribution')
+    .where('donation.status IN (:...statuses)', {
+      statuses: ['active', 'completed'],
+    })
+    .groupBy(donationIdFromSql)
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const formatPublicCampaign = (campaign: any) => ({
+  id: campaign.donation_id,
+  title: campaign.donation_title,
+  description: campaign.donation_description,
+  target: Number(campaign.donation_target),
+  duration: campaign.donation_duration,
+  image: campaign.donation_image,
+  status: campaign.donation_status,
+  createdAt: campaign.donation_createdAt,
+  amountRaised: Number(campaign.amountRaised),
+  numberOfDonors: Number(campaign.numberOfDonors),
+})
+
+export const getPublicCampaigns = catchController(
+  async (_req: Request, res: Response) => {
+    const campaigns = await publicCampaignsQuery()
+      .orderBy('donation.createdAt', 'DESC')
+      .getRawMany()
+
+    res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          campaigns.map(formatPublicCampaign),
+          [],
+          returnSuccess,
+        ),
+      )
+  },
+)
+
+export const getPublicCampaign = catchController(
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+    const campaign = isUUID(id)
+      ? await publicCampaignsQuery()
+          .andWhere(donationIdCondition, { id })
+          .getRawOne()
+      : undefined
+
+    if (!campaign) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json(generalResponse(StatusCodes.NOT_FOUND, '', [], donationNotFound))
+    }
+
+    res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          formatPublicCampaign(campaign),
+          [],
+          returnSuccess,
+        ),
       )
   },
 )

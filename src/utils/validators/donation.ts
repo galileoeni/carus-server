@@ -20,3 +20,10 @@ export const updateCampaignSchema = Joi.object({
   duration: Joi.date(),
   image: Joi.string().uri(),
 })
+
+// Cash donation via Paystack, amount in naira
+export const cashDonationSchema = Joi.object({
+  name: Joi.string().trim().min(2).max(100).required(),
+  email: Joi.string().trim().email().required(),
+  amount: Joi.number().integer().min(100).max(10000000).required(),
+})

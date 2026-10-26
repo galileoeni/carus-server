@@ -96,7 +96,13 @@ const startServer = async () => {
   app.use(passport.initialize() as any)
   app.use(passport.session())
   app.use(cookieParser())
-  app.use(bodyParser.json())
+  app.use(
+    bodyParser.json({
+      verify: (req, _res, buf) => {
+        ;(req as express.Request).rawBody = buf
+      },
+    }),
+  )
   app.get('/', (_req, res) => res.send(`CARUS RECYCLING SERVER`))
   app.get('/debug-sentry', function mainHandler(_req, _res) {
     throw new Error("Test Sentry error! It's nothing to worry about!")
