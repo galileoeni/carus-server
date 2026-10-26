@@ -57,6 +57,7 @@ const seedDatabase = async () => {
       { type: 'min_redemption', value: '100' },
       { type: 'max_redemption', value: '10000' },
       { type: 'donation_platform_fee', value: '10' },
+      { type: 'plastic_recycled_kg', value: '50000' },
     ]
 
     for (const config of configurations) {

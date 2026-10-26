@@ -24,6 +24,10 @@ export class Contribution {
   })
   amount?: number
 
+  // 'points' = donated from wallet earnings, 'cash' = paid via Paystack
+  @Column({ type: 'varchar', default: 'points' })
+  source?: 'points' | 'cash'
+
   @CreateDateColumn()
   createdAt?: Date
 
