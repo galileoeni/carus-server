@@ -21,6 +21,7 @@ import path from 'path'
 import { RedisStore as RateLimitRedisStore } from 'rate-limit-redis'
 import 'reflect-metadata'
 
+import { LOCAL_UPLOAD_ROOT } from './business/services/photos.service'
 import { createRedisClient } from './config/redis'
 import { AppDataSource } from './data-source'
 // import { reminderService } from './services/reminder.service'
@@ -60,7 +61,9 @@ const startServer = async () => {
   // Rate Limiting
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+    // Requests per IP per window. Many Nigerian mobile users share one IP
+    // (carrier NAT), so this needs headroom; tune with RATE_LIMIT_MAX.
+    limit: env.RATE_LIMIT_MAX,
     standardHeaders: 'draft-7', // set `RateLimit` and `RateLimit-Policy` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
     message:
@@ -136,6 +139,11 @@ const startServer = async () => {
     const allHealthy = Object.values(healthCheck).every((v) => v !== 'down')
     return res.status(allHealthy ? 200 : 503).json(healthCheck)
   })
+
+  // Pickup photos stored on disk when Cloudinary isn't set up (development)
+  if (!isProduction) {
+    app.use('/uploads', express.static(LOCAL_UPLOAD_ROOT))
+  }
 
   app.use('/v1', mainRoutes)
   app.use('/v1/admin', adminRoutes)
