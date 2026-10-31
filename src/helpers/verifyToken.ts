@@ -9,7 +9,10 @@ import { generalResponse, userNotFound } from './constants'
 
 const userRepository = AppDataSource.getRepository(User)
 
-const allowedRoles = Object.values(UserRoleEnum)
+// Business accounts use their own portal and routes (see verifyBusiness)
+const allowedRoles: UserRoleEnum[] = Object.values(UserRoleEnum).filter(
+  (role) => role !== UserRoleEnum.BUSINESS,
+)
 async function verifyToken(
   req: Request,
   res: Response,

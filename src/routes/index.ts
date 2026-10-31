@@ -3,6 +3,7 @@ import { Router } from 'express'
 import accountRoutes from '../account/routes'
 import adminRoutes from '../admin/routes'
 import authRoutes from '../auth/routes'
+import businessRoutes from '../business/routes'
 import configurationRoutes from '../configurations/routes'
 import contactRoutes from '../contact/routes'
 import donationRoutes from '../donation/routes'
@@ -18,6 +19,7 @@ router.use('/redeem', redemptionRoutes)
 router.use('/donation', donationRoutes)
 router.use('/account', accountRoutes)
 router.use('/auth', authRoutes)
+router.use('/business', businessRoutes)
 router.use('/schedule', scheduleRoutes)
 router.use('/admin', adminRoutes)
 router.use('/transactions', transactionRoutes)

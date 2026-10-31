@@ -3,6 +3,7 @@ import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import jwt from 'jsonwebtoken'
 
+import { UserRoleEnum } from '../../@types/user'
 import { userRepository } from '../../auth/controllers'
 import { User } from '../../entities/user'
 import { generalResponse } from '../../helpers/constants'
@@ -13,8 +14,19 @@ import catchController from '../../utils/catchControllerAsyncs'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
 
-export const loginUser = catchController(
-  async (req: Request, res: Response) => {
+// Customers (and staff) log in through the main app; business accounts have
+// their own portal. Each login only accepts its own kind of account.
+type LoginPortal = 'consumer' | 'business'
+
+const wrongPortalMessage: Record<LoginPortal, string> = {
+  consumer:
+    'This is a business account. Please log in through the Carus business portal.',
+  business:
+    'This is not a business account. Please log in through the main Carus app.',
+}
+
+const createLoginHandler = (portal: LoginPortal) =>
+  catchController(async (req: Request, res: Response) => {
     const { identifier, password }: { identifier: string; password: string } =
       req.body
 
@@ -165,6 +177,20 @@ export const loginUser = catchController(
         )
     }
     //What to do if the authentication is successful
+    // Checked after the password so it doesn't reveal the account type
+    if ((portal === 'business') !== (user.role === UserRoleEnum.BUSINESS)) {
+      return res
+        .status(StatusCodes.FORBIDDEN)
+        .json(
+          generalResponse(
+            StatusCodes.FORBIDDEN,
+            {},
+            [],
+            wrongPortalMessage[portal],
+          ),
+        )
+    }
+
     if (isPasswordValid && user.id) {
       user.failedLoginAttempts = 0
       await userRepository.save(user)
@@ -208,8 +234,10 @@ export const loginUser = catchController(
           ),
         )
     }
-  },
-)
+  })
+
+export const loginUser = createLoginHandler('consumer')
+export const loginBusiness = createLoginHandler('business')
 
 export const getAccessToken = catchController(
   async (req: Request, res: Response) => {

@@ -35,6 +35,18 @@ import {
   viewComplaints,
   resolveComplaint,
 } from '../controllers/admin-management.controller'
+import {
+  addBusinessPickup,
+  getBusinessDetail,
+  listBusinesses,
+  listPickupRequests,
+  setBusinessPlan,
+  updateBusinessPickup,
+} from '../../business/controllers/admin.controller'
+import {
+  recordPickupCollection,
+  withPickupPhotos,
+} from '../../business/controllers/collection.controller'
 import adminConfigurationRoutes from '../../configurations/routes/adminRoutes'
 import verifyAdmin from '../../helpers/verifyAdmin'
 import verifyMasterAdmin from '../../helpers/verifyMasterAdmin'
@@ -53,7 +65,11 @@ router.patch('/remove-admin/:id', verifyAdmin, removeAdmin)
 router.patch('/toggle-user-status/:id', verifyAdmin, toggleUserStatus)
 
 // Master Admin Only Routes
-router.patch('/admins/:id/promote-to-master', verifyMasterAdmin, promoteToMasterAdmin) // Promote to master admin
+router.patch(
+  '/admins/:id/promote-to-master',
+  verifyMasterAdmin,
+  promoteToMasterAdmin,
+) // Promote to master admin
 router.patch('/admins/:id/demote-to-base', verifyMasterAdmin, demoteToBaseAdmin) // Demote to base admin
 router.delete('/admins/:id', verifyMasterAdmin, removeAdmin) // Delete admin (master only)
 
@@ -74,6 +90,20 @@ router.get('/complaints', verifyAdmin, viewComplaints)
 router.patch('/complaints/:id/resolve', verifyAdmin, resolveComplaint)
 router.get('/transactions', verifyAdmin, getAllTransactions)
 router.use('/configurations', verifyAdmin, adminConfigurationRoutes)
+
+// Business accounts and their pickups
+router.get('/businesses', verifyAdmin, listBusinesses)
+router.get('/businesses/:id', verifyAdmin, getBusinessDetail)
+router.put('/businesses/:id/plan', verifyAdmin, setBusinessPlan)
+router.post('/businesses/:id/pickups', verifyAdmin, addBusinessPickup)
+router.get('/business-pickups/requests', verifyAdmin, listPickupRequests)
+router.patch('/business-pickups/:id', verifyAdmin, updateBusinessPickup)
+router.post(
+  '/business-pickups/:id/collection',
+  verifyAdmin,
+  withPickupPhotos,
+  recordPickupCollection,
+)
 
 router.get('/redemptions', verifyAdmin, getAllRedemptions)
 router.put('/redemptions/approve/:id', verifyAdmin, approveRedemption)

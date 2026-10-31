@@ -21,6 +21,7 @@ import path from 'path'
 import { RedisStore as RateLimitRedisStore } from 'rate-limit-redis'
 import 'reflect-metadata'
 
+import { LOCAL_UPLOAD_ROOT } from './business/services/photos.service'
 import { createRedisClient } from './config/redis'
 import { AppDataSource } from './data-source'
 // import { reminderService } from './services/reminder.service'
@@ -138,6 +139,11 @@ const startServer = async () => {
     const allHealthy = Object.values(healthCheck).every((v) => v !== 'down')
     return res.status(allHealthy ? 200 : 503).json(healthCheck)
   })
+
+  // Pickup photos stored on disk when Cloudinary isn't set up (development)
+  if (!isProduction) {
+    app.use('/uploads', express.static(LOCAL_UPLOAD_ROOT))
+  }
 
   app.use('/v1', mainRoutes)
   app.use('/v1/admin', adminRoutes)

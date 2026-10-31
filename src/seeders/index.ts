@@ -13,6 +13,10 @@ import bcrypt from 'bcryptjs'
 
 import { CategoryEnum, MaterialEnum } from '../@types/schedule'
 import { UserRoleEnum } from '../@types/user'
+import {
+  BusinessIndustryEnum,
+  BusinessProfile,
+} from '../entities/businessProfile'
 import { Configurations } from '../entities/configurations'
 import { Contribution } from '../entities/contribution'
 import { Donation } from '../entities/donation'
@@ -105,6 +109,38 @@ const seedDatabase = async () => {
       dob: new Date('1992-05-20'),
     })
     await userRepository.save(superadminUser)
+
+    // Sample business account for the business portal
+    const businessUser = await userRepository.save(
+      userRepository.create({
+        email: 'business@example.com',
+        password: await bcrypt.hash('Password@123', 10),
+        first_name: 'Tunde',
+        last_name: 'Bakare',
+        role: UserRoleEnum.BUSINESS,
+        status: 'ACTIVE',
+        avatar: 'https://robohash.org/GreenLeafHotel?set=3&size=500x500',
+        phone: '8099887766',
+        country_code: '+234',
+        address: '4 Admiralty Way, Lekki Phase 1',
+        city: 'Eti-Osa',
+      }),
+    )
+    await AppDataSource.getRepository(BusinessProfile).save({
+      user: businessUser,
+      companyName: 'Green Leaf Hotel',
+      industry: BusinessIndustryEnum.HOSPITALITY,
+      cacNumber: 'RC 7654321',
+      address: '4 Admiralty Way, Lekki Phase 1',
+      city: 'Eti-Osa',
+      contactRole: 'Facilities Manager',
+      wasteTypes: [
+        MaterialEnum.PLASTIC,
+        MaterialEnum.GLASS,
+        MaterialEnum.ORGANIC,
+      ],
+      estimatedMonthlyKg: 750,
+    })
 
     const realUsers = [
       { firstName: 'Chinedu', lastName: 'Okafor', gender: 'Male' },
@@ -400,6 +436,9 @@ const seedDatabase = async () => {
     console.log('\n🔐 SuperAdmin Credentials:')
     console.log(`   Email: carus+superadmin@mailinator.com`)
     console.log(`   Password: Password@101`)
+    console.log('\n🏢 Sample Business Credentials:')
+    console.log(`   Email: business@example.com`)
+    console.log(`   Password: Password@123`)
     console.log('\n👤 Sample User Credentials:')
     console.log(`   Email: user1@example.com`)
     console.log(`   Password: Password@123`)
