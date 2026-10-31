@@ -60,7 +60,9 @@ const startServer = async () => {
   // Rate Limiting
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+    // Requests per IP per window. Many Nigerian mobile users share one IP
+    // (carrier NAT), so this needs headroom; tune with RATE_LIMIT_MAX.
+    limit: env.RATE_LIMIT_MAX,
     standardHeaders: 'draft-7', // set `RateLimit` and `RateLimit-Policy` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
     message:

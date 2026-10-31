@@ -28,6 +28,7 @@ const env = {
   REDIS_TLS: process.env.REDIS_TLS === 'true',
   DB_SSL: process.env.DB_SSL === 'true',
   SENTRY_DSN: process.env.SENTRY_DSN,
+  RATE_LIMIT_MAX: Number(process.env.RATE_LIMIT_MAX) || 1000,
 }
 
 export default env
