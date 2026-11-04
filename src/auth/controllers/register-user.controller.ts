@@ -36,7 +36,6 @@ export const createUser = catchController(
       'last_name',
       'phone',
       'gender',
-      'dob',
       'country_code',
     ]
     if (requiredFields.some((field) => !req.body[field])) {
@@ -155,9 +154,20 @@ export const createUser = catchController(
     }
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const dateString = req.body.dob
-
-    const dob = new Date(dateString)
+    // Date of birth is optional
+    const dob = req.body.dob ? new Date(req.body.dob) : null
+    if (dob && Number.isNaN(dob.getTime())) {
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .json(
+          generalResponse(
+            StatusCodes.BAD_REQUEST,
+            {},
+            [],
+            'Please enter a valid date of birth',
+          ),
+        )
+    }
 
     // if the request meets all the requirements then...
     // generate a random whole number between 1 and 4 icluding 1 and 4

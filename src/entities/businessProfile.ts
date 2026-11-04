@@ -29,7 +29,12 @@ export class BusinessProfile {
   @PrimaryGeneratedColumn('uuid')
   id?: string
 
-  @OneToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  // onUpdate CASCADE so an unverified account can correct its email
+  @OneToOne(() => User, {
+    nullable: false,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn()
   user?: User
 

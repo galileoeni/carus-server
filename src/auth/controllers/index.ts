@@ -6,6 +6,7 @@ export const userRepository = AppDataSource.getRepository(User)
 
 export const walletRepository = AppDataSource.getRepository(Wallet)
 
+export * from './change-signup-email.controller'
 export * from './forgot-password.controller'
 export * from './google.controller'
 export * from './login.controller'
