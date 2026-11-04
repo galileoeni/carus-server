@@ -1,6 +1,7 @@
 import { Router } from 'express'
 
 import {
+  changeSignupEmail,
   completeGoogleSignupProfile,
   confirmForgotPassword,
   createUser,
@@ -19,6 +20,7 @@ router.post('/register-user', createUser)
 router.post('/login-user', loginUser)
 router.post('/verify-user', verifyUserEmail)
 router.post('/resend-verification-otp', resendOtp)
+router.post('/change-signup-email', changeSignupEmail)
 router.post('/forgot-password', forgotPassword)
 router.post('/forgot-password/confirm', confirmForgotPassword)
 router.post('/password/reset', resetPassword)
