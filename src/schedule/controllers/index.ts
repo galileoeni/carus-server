@@ -24,6 +24,7 @@ import { AppDataSource } from '../../data-source'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
 import { sendScheduleBookedEmail } from '../../helpers/emailService'
+import { teamAlert } from '../../services/telegram.service'
 
 const passRequredFieldsMessage =
   'Please make sure you pass all the required fields'
@@ -242,14 +243,32 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
 
   await scheduleRepository.save(newSchedule)
 
+  teamAlert(
+    category === CategoryEnum.DROPOFF
+      ? '📦 New drop-off booked'
+      : '🚚 New pickup booked',
+    [
+      ['Customer', `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()],
+      ['Phone', user.phone && `${user.country_code ?? ''} ${user.phone}`],
+      ['Date', date.toDateString()],
+      ['Material', material],
+      ['Amount', `${material_amount} (${container_amount} containers)`],
+      ['Address', address],
+    ],
+  )
+
   // Send in-app notification and booking confirmation email (both non-blocking)
   const categoryLabel = category === CategoryEnum.DROPOFF ? 'dropoff' : 'pickup'
-  notificationService.createNotification(
-    user,
-    'Schedule Booked',
-    `Your ${categoryLabel} for ${material} has been booked for ${date.toDateString()}. We will notify you once it is accepted.`,
-    NotificationType.SCHEDULE,
-  ).catch(() => {/* non-blocking */})
+  notificationService
+    .createNotification(
+      user,
+      'Schedule Booked',
+      `Your ${categoryLabel} for ${material} has been booked for ${date.toDateString()}. We will notify you once it is accepted.`,
+      NotificationType.SCHEDULE,
+    )
+    .catch(() => {
+      /* non-blocking */
+    })
 
   if (user.email && user.first_name) {
     sendScheduleBookedEmail(
@@ -258,7 +277,9 @@ const schedulePickup = catchController(async (req: Request, res: Response) => {
       categoryLabel,
       material,
       date.toDateString(),
-    ).catch(() => {/* non-blocking */})
+    ).catch(() => {
+      /* non-blocking */
+    })
   }
 
   return res

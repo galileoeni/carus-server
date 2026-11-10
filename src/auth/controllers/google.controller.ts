@@ -9,6 +9,7 @@ import { generalResponse } from '../../helpers/constants'
 import { errorMessages } from '../../helpers/error-messages'
 import generateToken from '../../helpers/generateToken'
 import catchController from '../../utils/catchControllerAsyncs'
+import { teamAlert } from '../../services/telegram.service'
 
 export const googleAuth = catchController(
   async (req: Request, res: Response) => {
@@ -253,6 +254,11 @@ export const completeGoogleSignupProfile = catchController(
           await walletRepository.save(wallet)
         }
         await userRepository.save(user)
+        teamAlert('🆕 New customer signed up (Google)', [
+          ['Name', `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()],
+          ['Email', user.email],
+          ['Phone', phone && `${country_code ?? ''} ${phone}`],
+        ])
         return res.status(StatusCodes.OK).json(
           generalResponse(
             StatusCodes.OK,

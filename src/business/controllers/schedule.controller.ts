@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 import { In, LessThan, MoreThanOrEqual, Not } from 'typeorm'
 
+import { findProfile } from './auth.controller'
 import {
   formatPickup,
   formatPlan,
@@ -22,6 +23,7 @@ import {
 } from '../../entities/businessSchedule'
 import { User } from '../../entities/user'
 import { generalResponse } from '../../helpers/constants'
+import { teamAlert } from '../../services/telegram.service'
 import catchController from '../../utils/catchControllerAsyncs'
 
 const pickupRepository = AppDataSource.getRepository(BusinessPickup)
@@ -109,6 +111,21 @@ export const requestQuickPickup = catchController(
         requestNote: value.note || null,
       }),
     )
+
+    const profile = await findProfile(business.id)
+    teamAlert('⚡ Quick pickup requested (needs approval)', [
+      ['Company', profile?.companyName],
+      ['Branch', profile?.branchName],
+      ['Date', value.date],
+      ['Window', value.window],
+      ['Address', profile && `${profile.address}, ${profile.city}`],
+      [
+        'Contact',
+        `${business.first_name} ${business.last_name}, ${business.country_code} ${business.phone}`,
+      ],
+      ['Note', value.note],
+      ['Next step', 'Approve or decline in admin → Businesses'],
+    ])
 
     return respond(
       res,

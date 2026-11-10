@@ -15,6 +15,7 @@ import catchController from '../../utils/catchControllerAsyncs'
 import { emailFormat } from '../../utils/email'
 import { notificationService } from '../../services/notification.service'
 import { NotificationType } from '../../entities/notification'
+import { teamAlert } from '../../services/telegram.service'
 
 export const createUser = catchController(
   async (req: Request, res: Response) => {
@@ -308,6 +309,13 @@ export const verifyUserEmail = catchController(
         wallet.updatedAt = new Date(Date.now())
         await walletRepository.save(wallet)
       }
+
+      teamAlert('🆕 New customer signed up', [
+        ['Name', `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()],
+        ['Email', user.email],
+        ['Phone', user.phone && `${user.country_code ?? ''} ${user.phone}`],
+        ['Area', user.city],
+      ])
 
       await notificationService.createNotification(
         user,
