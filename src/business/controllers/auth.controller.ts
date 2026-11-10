@@ -13,6 +13,7 @@ import { sendVerificationOtp } from '../../helpers/emailService'
 import { errorMessages } from '../../helpers/error-messages'
 import generateToken from '../../helpers/generateToken'
 import { notificationService } from '../../services/notification.service'
+import { teamAlert } from '../../services/telegram.service'
 import catchController from '../../utils/catchControllerAsyncs'
 import { emailFormat } from '../../utils/email'
 import { formatJoiError } from '../../utils/helper'
@@ -219,6 +220,26 @@ export const verifyBusinessEmail = catchController(
     await userRepository.save(user)
 
     const profile = await findProfile(user.id)
+    teamAlert(
+      profile?.parent ? '🏢 New branch joined' : '🏢 New business signed up',
+      [
+        ['Company', profile?.companyName],
+        ['Branch', profile?.branchName],
+        ['Head office', profile?.parent?.companyName],
+        ['Industry', profile?.industry],
+        ['Address', profile && `${profile.address}, ${profile.city}`],
+        ['Contact', `${user.first_name} ${user.last_name}`],
+        ['Email', user.email],
+        ['Phone', `${user.country_code} ${user.phone}`],
+        ['Waste', profile?.wasteTypes?.join(', ')],
+        [
+          'Expected volume',
+          profile?.estimatedMonthlyKg &&
+            `about ${profile.estimatedMonthlyKg} kg a month`,
+        ],
+        ['Next step', 'Agree a pickup schedule in admin → Businesses'],
+      ],
+    )
     await notificationService.createNotification(
       user,
       'Welcome to Carus for Business!',
