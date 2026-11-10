@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
+import { EntityManager } from 'typeorm'
 
 import { UserRoleEnum } from '../../@types/user'
 import { AppDataSource } from '../../data-source'
@@ -51,8 +52,72 @@ export const formatBusiness = (
     wasteTypes: profile.wasteTypes,
     estimatedMonthlyKg: profile.estimatedMonthlyKg,
     createdAt: profile.createdAt,
+    // Branches see pickups and data but not payments
+    isBranch: !!profile.parent,
+    branchName: profile.branchName ?? null,
+    hq: profile.parent ? { companyName: profile.parent.companyName } : null,
   },
 })
+
+// Profile with its HQ (if it's a branch)
+export const findProfile = (userId: string | undefined) =>
+  profileRepository.findOne({
+    where: { user: { id: userId } },
+    relations: ['parent'],
+  })
+
+// Same form the login lookup uses (no leading +, 0 or 234)
+export const normalisePhone = (phone: string) =>
+  phone
+    .replace(/\s+/g, '')
+    .replace(/^\+/, '')
+    .replace(/^234/, '')
+    .replace(/^0/, '')
+
+// Unsaved login for a new business account (HQ or branch)
+export const newBusinessUser = (
+  manager: EntityManager,
+  v: {
+    email: string
+    phone: string
+    password: string
+    first_name: string
+    last_name: string
+    country_code: string
+    city: string
+    address: string
+    avatarSeed: string
+    otp: string
+  },
+) =>
+  manager.create(User, {
+    role: UserRoleEnum.BUSINESS,
+    email: v.email,
+    password: v.password,
+    first_name: v.first_name,
+    last_name: v.last_name,
+    phone: v.phone,
+    country_code: v.country_code,
+    city: v.city,
+    address: v.address,
+    avatar: `https://robohash.org/${encodeURIComponent(
+      v.avatarSeed,
+    )}?set=3&size=500x500`,
+    otp: v.otp,
+    otpExpires: new Date(Date.now() + 10.5 * 60 * 1000),
+    isGoogleUser: false,
+  })
+
+// Why a new login can't use this email or phone, if it can't
+export const loginTakenError = async (email: string, phone: string) => {
+  if (await userRepository.findOne({ where: { email } })) {
+    return 'This email is already taken'
+  }
+  if (await userRepository.findOneBy({ phone })) {
+    return 'This phone number is already linked to another account'
+  }
+  return null
+}
 
 export const registerBusiness = catchController(
   async (req: Request, res: Response) => {
@@ -65,47 +130,19 @@ export const registerBusiness = catchController(
     }
 
     const email = value.email.toLowerCase()
-    // Same form the login lookup uses (no leading +, 0 or 234)
-    const phone = value.phone
-      .replace(/\s+/g, '')
-      .replace(/^\+/, '')
-      .replace(/^234/, '')
-      .replace(/^0/, '')
-    if (await userRepository.findOne({ where: { email } })) {
-      return respond(
-        res,
-        StatusCodes.CONFLICT,
-        {},
-        'This email is already taken',
-      )
-    }
-    if (await userRepository.findOneBy({ phone })) {
-      return respond(
-        res,
-        StatusCodes.CONFLICT,
-        {},
-        'This phone number is already linked to another account',
-      )
-    }
+    const phone = normalisePhone(value.phone)
+    const taken = await loginTakenError(email, phone)
+    if (taken) return respond(res, StatusCodes.CONFLICT, {}, taken)
 
     const otp = User.generateOTP()
     await AppDataSource.transaction(async (manager) => {
-      const user = manager.create(User, {
-        role: UserRoleEnum.BUSINESS,
+      const user = newBusinessUser(manager, {
+        ...value,
         email,
-        password: await bcrypt.hash(value.password, 10),
-        first_name: value.first_name,
-        last_name: value.last_name,
         phone,
-        country_code: value.country_code,
-        city: value.city,
-        address: value.address,
-        avatar: `https://robohash.org/${encodeURIComponent(
-          value.companyName,
-        )}?set=3&size=500x500`,
+        password: await bcrypt.hash(value.password, 10),
+        avatarSeed: value.companyName,
         otp,
-        otpExpires: new Date(Date.now() + 10.5 * 60 * 1000),
-        isGoogleUser: false,
       })
       await manager.save(user)
 
@@ -181,9 +218,7 @@ export const verifyBusinessEmail = catchController(
     user.status = 'ACTIVE'
     await userRepository.save(user)
 
-    const profile = await profileRepository.findOne({
-      where: { user: { id: user.id } },
-    })
+    const profile = await findProfile(user.id)
     await notificationService.createNotification(
       user,
       'Welcome to Carus for Business!',
@@ -214,9 +249,7 @@ export const getBusinessMe = catchController(
   async (req: Request, res: Response) => {
     // Set by verifyBusiness
     const user = req.user as User
-    const profile = await profileRepository.findOne({
-      where: { user: { id: user.id } },
-    })
+    const profile = await findProfile(user.id)
     return respond(
       res,
       StatusCodes.OK,

@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -63,6 +64,15 @@ export class BusinessProfile {
 
   @Column({ type: 'int', nullable: true })
   estimatedMonthlyKg?: number | null
+
+  // Set when this account is a branch of another business (its HQ). A branch
+  // has its own login, address, pickup plan and pickup data.
+  @ManyToOne(() => BusinessProfile, { nullable: true, onDelete: 'SET NULL' })
+  parent?: BusinessProfile | null
+
+  // e.g. "Lekki branch"; only used for branches
+  @Column({ type: 'varchar', nullable: true })
+  branchName?: string | null
 
   @CreateDateColumn()
   createdAt?: Date
