@@ -132,6 +132,14 @@ const formatBusinessSummary = (
         contactRole: profile.contactRole,
         wasteTypes: profile.wasteTypes,
         estimatedMonthlyKg: profile.estimatedMonthlyKg,
+        branchName: profile.branchName ?? null,
+        // The HQ account, when this is a branch
+        hq: profile.parent
+          ? {
+              id: profile.parent.user?.id ?? null,
+              companyName: profile.parent.companyName,
+            }
+          : null,
       }
     : null,
 })
@@ -157,7 +165,7 @@ export const listBusinesses = catchController(
     const [profiles, plans, requested, upcoming] = await Promise.all([
       profileRepository.find({
         where: { user: { id: In(ids) } },
-        relations: ['user'],
+        relations: ['user', 'parent', 'parent.user'],
       }),
       planRepository.find({
         where: { business: { id: In(ids) } },
@@ -215,7 +223,10 @@ export const getBusinessDetail = catchController(
 
     const today = todayInLagos()
     const [profile, plan, upcoming, past] = await Promise.all([
-      profileRepository.findOne({ where: { user: { id: business.id } } }),
+      profileRepository.findOne({
+        where: { user: { id: business.id } },
+        relations: ['parent', 'parent.user'],
+      }),
       planRepository.findOne({ where: { business: { id: business.id } } }),
       pickupRepository.find({
         where: { business: { id: business.id }, date: MoreThanOrEqual(today) },
@@ -235,6 +246,21 @@ export const getBusinessDetail = catchController(
       StatusCodes.OK,
       {
         ...formatBusinessSummary(business, profile ?? undefined),
+        branches: profile
+          ? (
+              await profileRepository.find({
+                where: { parent: { id: profile.id } },
+                relations: ['user'],
+                order: { createdAt: 'ASC' },
+              })
+            ).map((b) => ({
+              id: b.user?.id,
+              branchName: b.branchName,
+              address: b.address,
+              city: b.city,
+              email: b.user?.email,
+            }))
+          : [],
         today,
         plan: formatPlan(plan),
         upcoming: upcoming.map(formatAdminPickup),

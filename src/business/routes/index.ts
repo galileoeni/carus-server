@@ -5,6 +5,14 @@ import {
   registerBusiness,
   verifyBusinessEmail,
 } from '../controllers/auth.controller'
+import {
+  createBranchInvite,
+  getBranchDetail,
+  getBranchInvite,
+  joinAsBranch,
+  listBranches,
+  revokeBranchInvite,
+} from '../controllers/branches.controller'
 import { getBusinessData } from '../controllers/data.controller'
 import {
   cancelBusinessPickup,
@@ -29,5 +37,15 @@ router.post('/pickups', verifyBusiness, requestQuickPickup)
 router.post('/pickups/:id/cancel', verifyBusiness, cancelBusinessPickup)
 
 router.get('/data', verifyBusiness, getBusinessData)
+
+// HQ: locations and private branch sign-up links
+router.get('/branches', verifyBusiness, listBranches)
+router.get('/branches/:id', verifyBusiness, getBranchDetail)
+router.post('/branch-invites', verifyBusiness, createBranchInvite)
+router.delete('/branch-invites/:id', verifyBusiness, revokeBranchInvite)
+
+// Public: a branch signs up through its HQ's link
+router.get('/join/:token', getBranchInvite)
+router.post('/join/:token', joinAsBranch)
 
 export default router

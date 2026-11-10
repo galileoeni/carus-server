@@ -62,3 +62,20 @@ export const registerBusinessSchema = Joi.object({
       'Password must be at least 8 characters with an uppercase and a lowercase letter',
   }),
 })
+
+// Sign-up through an HQ's private branch link. Company name, industry and
+// CAC come from the HQ; waste types default to the HQ's.
+export const joinBranchSchema = registerBusinessSchema.keys({
+  companyName: Joi.forbidden(),
+  industry: Joi.forbidden(),
+  cacNumber: Joi.forbidden(),
+  branchName: Joi.string().trim().min(2).max(80).required(),
+  wasteTypes: Joi.array()
+    .items(Joi.string().valid(...Object.values(MaterialEnum)))
+    .min(1)
+    .unique(),
+})
+
+export const branchInviteSchema = Joi.object({
+  branchName: Joi.string().trim().max(80).allow('', null),
+})
