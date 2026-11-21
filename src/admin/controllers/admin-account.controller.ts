@@ -2,14 +2,20 @@ import bcrypt from 'bcryptjs'
 import { isEmail } from 'class-validator'
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
+import { Raw } from 'typeorm'
 
 import { UserRoleEnum, UserRow } from '../../@types/user'
 import { userRepository, walletRepository } from '../../auth/controllers'
+import { AppDataSource } from '../../data-source'
+import { Configurations } from '../../entities/configurations'
+import {
+  Transaction,
+  TransactionDirection,
+  TransactionStatus,
+  TransactionType,
+} from '../../entities/transactions'
 import { validateOtp } from '../../entities/user'
 import { Wallet } from '../../entities/wallet'
-import { AppDataSource } from '../../data-source'
-import { Transaction, TransactionType, TransactionDirection, TransactionStatus } from '../../entities/transactions'
-import { Configurations } from '../../entities/configurations'
 import { generalResponse, passwordRegex } from '../../helpers/constants'
 import { errorMessages } from '../../helpers/error-messages'
 import generateToken from '../../helpers/generateToken'
@@ -22,7 +28,7 @@ export const createAdmin = catchController(
       first_name,
       last_name,
       gender,
-      email,
+      email: rawEmail,
       phone,
       password,
       country_code,
@@ -44,9 +50,14 @@ export const createAdmin = catchController(
         )
     }
 
+    // Store emails lower-case and trimmed so login matches however it's typed
+    const email = String(rawEmail).trim().toLowerCase()
+
     //Check if email already exists
     const existingEmail = await userRepository.findOne({
-      where: { email: email },
+      where: {
+        email: Raw((column) => `LOWER(TRIM(${column})) = :email`, { email }),
+      },
     })
 
     if (existingEmail) {
@@ -410,7 +421,14 @@ export const promoteToMasterAdmin = async (req: Request, res: Response) => {
     if (user.role !== UserRoleEnum.ADMIN) {
       return res
         .status(StatusCodes.BAD_REQUEST)
-        .json(generalResponse(StatusCodes.BAD_REQUEST, {}, [], 'User must be an admin to be promoted to master admin'))
+        .json(
+          generalResponse(
+            StatusCodes.BAD_REQUEST,
+            {},
+            [],
+            'User must be an admin to be promoted to master admin',
+          ),
+        )
     }
 
     user.admin_type = 'master'
@@ -456,7 +474,14 @@ export const demoteToBaseAdmin = async (req: Request, res: Response) => {
     if (user.role !== UserRoleEnum.ADMIN) {
       return res
         .status(StatusCodes.BAD_REQUEST)
-        .json(generalResponse(StatusCodes.BAD_REQUEST, {}, [], 'User must be an admin to be demoted to base admin'))
+        .json(
+          generalResponse(
+            StatusCodes.BAD_REQUEST,
+            {},
+            [],
+            'User must be an admin to be demoted to base admin',
+          ),
+        )
     }
 
     user.admin_type = 'base'
@@ -661,22 +686,22 @@ export const manualPayment = catchController(
     transaction.amount = parsedAmount
     transaction.charges = 0
     transaction.status = TransactionStatus.COMPLETED
-    transaction.description = description || `Manual wallet adjustment / payment credit of ₦${parsedAmount.toLocaleString()}`
+    transaction.description =
+      description ||
+      `Manual wallet adjustment / payment credit of ₦${parsedAmount.toLocaleString()}`
     transaction.wallet = wallet
     await transactionRepository.save(transaction)
 
-    return res
-      .status(StatusCodes.OK)
-      .json(
-        generalResponse(
-          StatusCodes.OK,
-          {
-            points: wallet.points,
-            naira_amount: wallet.points / rate,
-          },
-          [],
-          `User payment updated successfully. Wallet credited with ${pointsToAdd} points (₦${parsedAmount.toLocaleString()}).`,
-        ),
-      )
+    return res.status(StatusCodes.OK).json(
+      generalResponse(
+        StatusCodes.OK,
+        {
+          points: wallet.points,
+          naira_amount: wallet.points / rate,
+        },
+        [],
+        `User payment updated successfully. Wallet credited with ${pointsToAdd} points (₦${parsedAmount.toLocaleString()}).`,
+      ),
+    )
   },
 )

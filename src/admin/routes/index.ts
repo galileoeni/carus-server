@@ -59,7 +59,7 @@ router.post('/login', loginAdmin)
 router.get('/dashboard', verifyAdmin, getDashboardData)
 
 // Admin Management Routes (master admin only)
-router.post('/create-admin', verifyMasterAdmin, createAdmin)
+router.post('/create-admin', verifyAdmin, verifyMasterAdmin, createAdmin)
 router.patch('/assign-admin/:id', verifyAdmin, assignAdmin)
 router.patch('/remove-admin/:id', verifyAdmin, removeAdmin)
 router.patch('/toggle-user-status/:id', verifyAdmin, toggleUserStatus)
@@ -67,11 +67,17 @@ router.patch('/toggle-user-status/:id', verifyAdmin, toggleUserStatus)
 // Master Admin Only Routes
 router.patch(
   '/admins/:id/promote-to-master',
+  verifyAdmin,
   verifyMasterAdmin,
   promoteToMasterAdmin,
 ) // Promote to master admin
-router.patch('/admins/:id/demote-to-base', verifyMasterAdmin, demoteToBaseAdmin) // Demote to base admin
-router.delete('/admins/:id', verifyMasterAdmin, removeAdmin) // Delete admin (master only)
+router.patch(
+  '/admins/:id/demote-to-base',
+  verifyAdmin,
+  verifyMasterAdmin,
+  demoteToBaseAdmin,
+) // Demote to base admin
+router.delete('/admins/:id', verifyAdmin, verifyMasterAdmin, removeAdmin) // Delete admin (master only)
 
 router.put('/schedule/accept/:id', verifyAdmin, acceptSchedule)
 router.put('/schedule/cancel/:id', verifyAdmin, cancelSchedule)

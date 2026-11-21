@@ -1,9 +1,22 @@
+import bcrypt from 'bcryptjs'
+import { Request, Response } from 'express'
+import { StatusCodes } from 'http-status-codes'
+import { ILike, In, Raw } from 'typeorm'
+
+import { UserRoleEnum } from '../../@types/user'
+import { AppDataSource } from '../../data-source'
+import { Configurations } from '../../entities/configurations'
+import { NotificationType } from '../../entities/notification'
+import { Redemption, RedemptionStatus } from '../../entities/redemption'
+import { Schedule } from '../../entities/schedule'
 import {
   Transaction,
-  TransactionType,
   TransactionDirection,
   TransactionStatus,
+  TransactionType,
 } from '../../entities/transactions'
+import { User } from '../../entities/user'
+import { Wallet } from '../../entities/wallet'
 import {
   generalResponse,
   invalidCredentials,
@@ -11,24 +24,10 @@ import {
   returnSuccess,
   userNotFound,
 } from '../../helpers/constants'
-import bcrypt from 'bcryptjs'
-import { Request, Response } from 'express'
-import { StatusCodes } from 'http-status-codes'
-
-import { UserRoleEnum } from '../../@types/user'
-import { Configurations } from '../../entities/configurations'
-import { Redemption, RedemptionStatus } from '../../entities/redemption'
-import { Schedule } from '../../entities/schedule'
-import { Contribution } from '../../entities/contribution'
-import { User } from '../../entities/user'
-import { Wallet } from '../../entities/wallet'
-import generateToken from '../../helpers/generateToken'
-import catchController from '../../utils/catchControllerAsyncs'
-import { AppDataSource } from '../../data-source'
-import { notificationService } from '../../services/notification.service'
-import { NotificationType } from '../../entities/notification'
-import { In, ILike } from 'typeorm'
 import { sendScheduleAcceptedEmail } from '../../helpers/emailService'
+import generateToken from '../../helpers/generateToken'
+import { notificationService } from '../../services/notification.service'
+import catchController from '../../utils/catchControllerAsyncs'
 
 const scheduleRepository = AppDataSource.getRepository(Schedule)
 const userRepository = AppDataSource.getRepository(User)
@@ -69,8 +68,14 @@ export const loginAdmin = catchController(
     }
 
     // Check if the client's identifier (username or email) is contained in the database
+    // Ignore case and stray spaces: admin emails were stored as typed
     const user = await userRepository.findOne({
-      where: { email: identifier },
+      where: {
+        email: Raw((column) => `LOWER(TRIM(${column})) = :email`, {
+          email: identifier.trim().toLowerCase(),
+        }),
+        role: In([UserRoleEnum.ADMIN, UserRoleEnum.SUPERADMIN]),
+      },
     })
     //check if user is an admin
     if (
@@ -80,12 +85,7 @@ export const loginAdmin = catchController(
       return res
         .status(StatusCodes.NOT_FOUND)
         .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            invalidCredentials,
-          ),
+          generalResponse(StatusCodes.NOT_FOUND, {}, [], invalidCredentials),
         )
     }
 
@@ -93,12 +93,7 @@ export const loginAdmin = catchController(
       return res
         .status(StatusCodes.NOT_FOUND)
         .json(
-          generalResponse(
-            StatusCodes.NOT_FOUND,
-            {},
-            [],
-            invalidCredentials,
-          ),
+          generalResponse(StatusCodes.NOT_FOUND, {}, [], invalidCredentials),
         )
     }
 
@@ -248,7 +243,12 @@ export const approveRedemption = catchController(
       return res
         .status(statusCode)
         .json(
-          generalResponse(statusCode, {}, [], result.message ?? 'An error occurred'),
+          generalResponse(
+            statusCode,
+            {},
+            [],
+            result.message ?? 'An error occurred',
+          ),
         )
     }
 
@@ -342,7 +342,12 @@ export const declineRedemption = catchController(
       return res
         .status(statusCode)
         .json(
-          generalResponse(statusCode, {}, [], result.message ?? 'An error occurred'),
+          generalResponse(
+            statusCode,
+            {},
+            [],
+            result.message ?? 'An error occurred',
+          ),
         )
     }
 
@@ -417,7 +422,7 @@ export const getDashboardData = catchController(
     const pointToNaira = await configurationRepository.findOne({
       where: { type: 'point_to_naira' },
     })
-    
+
     // Get last 6 months labels
     const last6Months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date()
@@ -624,12 +629,16 @@ export const acceptSchedule = catchController(
         : 'the scheduled date'
       const categoryLabel = existingSchedule.category ?? 'pickup'
 
-      notificationService.createNotification(
-        scheduleUser,
-        'Schedule Accepted!',
-        `Your ${categoryLabel} schedule for ${existingSchedule.material} has been accepted. Please be ready on ${acceptedDateStr}.`,
-        NotificationType.SCHEDULE,
-      ).catch(() => {/* non-blocking */})
+      notificationService
+        .createNotification(
+          scheduleUser,
+          'Schedule Accepted!',
+          `Your ${categoryLabel} schedule for ${existingSchedule.material} has been accepted. Please be ready on ${acceptedDateStr}.`,
+          NotificationType.SCHEDULE,
+        )
+        .catch(() => {
+          /* non-blocking */
+        })
 
       if (scheduleUser.email && scheduleUser.first_name) {
         sendScheduleAcceptedEmail(
@@ -638,7 +647,9 @@ export const acceptSchedule = catchController(
           categoryLabel,
           existingSchedule.material ?? 'your items',
           acceptedDateStr,
-        ).catch(() => {/* non-blocking */})
+        ).catch(() => {
+          /* non-blocking */
+        })
       }
     }
 
@@ -930,14 +941,16 @@ export const fulfillSchedule = catchController(
         )
     }
 
-    return res.status(StatusCodes.OK).json(
-      generalResponse(
-        StatusCodes.OK,
-        {},
-        [],
-        `Schedule has been completed, user's wallet will be credited with ₦${result.amount?.toLocaleString()}`,
-      ),
-    )
+    return res
+      .status(StatusCodes.OK)
+      .json(
+        generalResponse(
+          StatusCodes.OK,
+          {},
+          [],
+          `Schedule has been completed, user's wallet will be credited with ₦${result.amount?.toLocaleString()}`,
+        ),
+      )
   },
 )
 
@@ -1230,7 +1243,9 @@ export const getUserById = catchController(
     const walletPoints = Number(user.wallet?.points || 0)
     const walletNaira = rate > 0 ? walletPoints / rate : 0
 
-    const formattedAddress = `${user.address || ''} ${user.city || ''} ${user.region || ''}`.trim() || '—'
+    const formattedAddress =
+      `${user.address || ''} ${user.city || ''} ${user.region || ''}`.trim() ||
+      '—'
 
     res.status(StatusCodes.OK).json(
       generalResponse(
@@ -1250,19 +1265,47 @@ export const getUserById = catchController(
           role: user.role,
           created_at: user.createdAt,
           updated_at: user.updatedAt,
-          wallet: user.wallet ? {
-            ...user.wallet,
-            naira_amount: walletNaira,
-          } : null,
-          schedules: user.orders ? user.orders.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()) : [],
-          transactions: user.transactions ? user.transactions.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime()) : [],
-          redemptions: user.redemptions ? user.redemptions.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()) : [],
-          contributions: user.contributions ? user.contributions.map(c => ({
-            id: c.id,
-            amount: c.amount,
-            createdAt: c.createdAt,
-            campaign_title: c.donation?.title,
-          })).sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()) : [],
+          wallet: user.wallet
+            ? {
+                ...user.wallet,
+                naira_amount: walletNaira,
+              }
+            : null,
+          schedules: user.orders
+            ? user.orders.sort(
+                (a, b) =>
+                  new Date(b.date || '').getTime() -
+                  new Date(a.date || '').getTime(),
+              )
+            : [],
+          transactions: user.transactions
+            ? user.transactions.sort(
+                (a, b) =>
+                  new Date(b.date || '').getTime() -
+                  new Date(a.date || '').getTime(),
+              )
+            : [],
+          redemptions: user.redemptions
+            ? user.redemptions.sort(
+                (a, b) =>
+                  new Date(b.createdAt || '').getTime() -
+                  new Date(a.createdAt || '').getTime(),
+              )
+            : [],
+          contributions: user.contributions
+            ? user.contributions
+                .map((c) => ({
+                  id: c.id,
+                  amount: c.amount,
+                  createdAt: c.createdAt,
+                  campaign_title: c.donation?.title,
+                }))
+                .sort(
+                  (a, b) =>
+                    new Date(b.createdAt || '').getTime() -
+                    new Date(a.createdAt || '').getTime(),
+                )
+            : [],
         },
         [],
         returnSuccess,

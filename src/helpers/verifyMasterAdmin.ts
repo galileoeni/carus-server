@@ -37,17 +37,12 @@ async function verifyMasterAdmin(
     return res
       .status(StatusCodes.FORBIDDEN)
       .json(
-        generalResponse(
-          StatusCodes.FORBIDDEN,
-          {},
-          [],
-          'Admin access required',
-        ),
+        generalResponse(StatusCodes.FORBIDDEN, {}, [], 'Admin access required'),
       )
   }
 
-  // Check if user is a master admin
-  if (user.admin_type !== 'master') {
+  // Super admins and master admins can manage other admins
+  if (user.role !== UserRoleEnum.SUPERADMIN && user.admin_type !== 'master') {
     return res
       .status(StatusCodes.FORBIDDEN)
       .json(
