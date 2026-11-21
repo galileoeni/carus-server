@@ -7,6 +7,7 @@ import { In, LessThan, MoreThanOrEqual, Not } from 'typeorm'
 import { formatCollectedPickup } from './collection.controller'
 import {
   ACTIVE_STATUSES,
+  addDays,
   formatPickup,
   formatPlan,
   hasActivePickupOn,
@@ -341,7 +342,12 @@ const addPickupSchema = Joi.object({
     .valid(...Object.values(PickupWindowEnum))
     .required(),
   note: Joi.string().trim().max(500).allow('', null),
+  // Logging a collection that already happened: the date can be in the past
+  forCollection: Joi.boolean().default(false),
 })
+
+// How far back a past collection can be logged
+const PAST_COLLECTION_DAYS = 90
 
 export const addBusinessPickup = catchController(
   async (req: Request, res: Response) => {
@@ -351,7 +357,21 @@ export const addBusinessPickup = catchController(
     }
     const { error, value } = addPickupSchema.validate(req.body)
     if (error) return respond(res, StatusCodes.BAD_REQUEST, {}, error.message)
-    if (!isValidDate(value.date) || value.date < todayInLagos()) {
+    const today = todayInLagos()
+    if (value.forCollection) {
+      if (
+        !isValidDate(value.date) ||
+        value.date > today ||
+        value.date < addDays(today, -PAST_COLLECTION_DAYS)
+      ) {
+        return respond(
+          res,
+          StatusCodes.BAD_REQUEST,
+          {},
+          `Choose today or a date in the last ${PAST_COLLECTION_DAYS} days`,
+        )
+      }
+    } else if (!isValidDate(value.date) || value.date < today) {
       return respond(res, StatusCodes.BAD_REQUEST, {}, FUTURE_DATE_ONLY)
     }
     if (await hasActivePickupOn(business.id as string, value.date)) {
@@ -373,11 +393,13 @@ export const addBusinessPickup = catchController(
         adminNote: value.note || null,
       }),
     )
-    await notify(
-      business,
-      'Pickup scheduled',
-      `Carus will collect on ${describeDate(value.date, value.window)}.`,
-    )
+    // A logged past collection is announced when its weights are saved
+    if (!value.forCollection)
+      await notify(
+        business,
+        'Pickup scheduled',
+        `Carus will collect on ${describeDate(value.date, value.window)}.`,
+      )
     return respond(
       res,
       StatusCodes.CREATED,
